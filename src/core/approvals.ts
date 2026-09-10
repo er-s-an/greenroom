@@ -31,10 +31,21 @@ export class ApprovalQueue {
       audit?: AuditLog;
       now?: () => number;
     },
-  ) {}
+    initial: OutreachDraft[] = [],
+  ) {
+    for (const d of initial) {
+      this.drafts.set(d.id, d);
+      const n = Number(d.id.replace(/^od-/, ""));
+      if (Number.isFinite(n)) this.counter = Math.max(this.counter, n);
+    }
+  }
 
   private now(): number {
     return this.deps.now?.() ?? Date.now();
+  }
+
+  all(): OutreachDraft[] {
+    return [...this.drafts.values()];
   }
 
   submit(input: { memberId: string; handle: string; kind: StallKind; text: string }): OutreachDraft {

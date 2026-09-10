@@ -22,6 +22,8 @@ export interface FaqResult {
   trace: {
     retrieved: { docId: string; score: number }[];
     gateReasons?: string[];
+    /** True when the first draft failed the gate and a repair attempt fixed it. */
+    repaired?: boolean;
   };
 }
 
@@ -66,15 +68,29 @@ export async function answerQuestion(
   }
 
   const contextDocs: CorpusDoc[] = hits.slice(0, CONTEXT_DOCS).map((h) => h.doc);
-  const draft = await llm.draftAnswer(question, contextDocs);
-  const gate = verifyDraft(draft, contextDocs);
+  let draft = await llm.draftAnswer(question, contextDocs);
+  let gate = verifyDraft(draft, contextDocs);
+  let repaired = false;
+
+  // One repair attempt with the gate's exact rejection reasons before
+  // bothering a human — wording problems are fixable, fabrications are not.
+  if (gate.verdict === "escalate") {
+    draft = await llm.draftAnswer(question, contextDocs, { repairHints: gate.reasons });
+    const secondGate = verifyDraft(draft, contextDocs);
+    if (secondGate.verdict === "pass") {
+      gate = secondGate;
+      repaired = true;
+    } else {
+      gate = secondGate;
+    }
+  }
 
   if (gate.verdict === "escalate") {
     return {
       question,
       decision: "escalated",
       escalation: { reasons: gate.reasons, routeTo: humanRoute(corpus) },
-      trace: { ...trace, gateReasons: gate.reasons },
+      trace: { ...trace, gateReasons: gate.reasons, repaired },
     };
   }
 
@@ -101,6 +117,6 @@ export async function answerQuestion(
     answer: draft.text,
     citations,
     ...(alerts.length > 0 ? { alerts } : {}),
-    trace,
+    trace: { ...trace, ...(repaired ? { repaired } : {}) },
   };
 }

@@ -19,35 +19,46 @@ export function containment(claim: string, docBody: string): number {
 
 const MIN_CONTAINMENT = 0.55;
 
+function normalize(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 /**
  * The citation gate. Deterministic. The LLM may word an answer, but every
- * sentence must cite a retrieved document and stay inside that document's
- * vocabulary; anything else never reaches a participant.
+ * sentence must be covered by a citation to a retrieved document, every
+ * citation must anchor to the answer text, and every claim must stay inside
+ * its source's vocabulary. Anything else never reaches a participant.
+ *
+ * Anchoring tolerates split/merge differences: a citation claim may span
+ * several answer sentences, or vice versa — what matters is that the wording
+ * exists in the answer and is covered by the source.
  */
 export function verifyDraft(draft: AnswerDraft, retrieved: CorpusDoc[]): GateResult {
   const reasons: string[] = [];
   const claims = splitSentences(draft.text);
   const retrievedIds = new Set(retrieved.map((d) => d.id));
+  const answerNorm = normalize(draft.text);
 
   if (claims.length === 0) reasons.push("empty answer");
   if (draft.citations.length === 0) reasons.push("no citations");
 
-  const coveredClaims = new Set<string>();
+  const citedDocs = new Map<string, CorpusDoc>();
   for (const cit of draft.citations) {
     if (!retrievedIds.has(cit.docId)) {
       reasons.push(`citation to non-retrieved doc '${cit.docId}'`);
       continue;
     }
-    if (!claims.includes(cit.claim)) {
-      reasons.push(`citation claim is not a sentence of the answer: '${cit.claim.slice(0, 60)}…'`);
+    const claimNorm = normalize(cit.claim);
+    if (!answerNorm.includes(claimNorm) && !claimNorm.includes(answerNorm)) {
+      reasons.push(`citation claim does not anchor to the answer: '${claimNorm.slice(0, 60)}…'`);
       continue;
     }
-    coveredClaims.add(cit.claim);
     const doc = retrieved.find((d) => d.id === cit.docId)!;
+    citedDocs.set(doc.id, doc);
     const c = containment(cit.claim, doc.body);
     if (c < MIN_CONTAINMENT) {
       reasons.push(
-        `claim drifts from source (containment ${c.toFixed(2)} < ${MIN_CONTAINMENT}): '${cit.claim.slice(0, 60)}…'`,
+        `claim drifts from source (containment ${c.toFixed(2)} < ${MIN_CONTAINMENT}): '${claimNorm.slice(0, 60)}…'`,
       );
     }
     if (doc.tags.includes("trap-stale-deadline")) {
@@ -59,7 +70,11 @@ export function verifyDraft(draft: AnswerDraft, retrieved: CorpusDoc[]): GateRes
   }
 
   for (const claim of claims) {
-    if (!coveredClaims.has(claim)) {
+    const covered = draft.citations.some((cit) => {
+      const claimNorm = normalize(cit.claim);
+      return claimNorm.includes(normalize(claim)) || normalize(claim).includes(claimNorm);
+    });
+    if (!covered) {
       reasons.push(`uncited sentence: '${claim.slice(0, 60)}…'`);
     }
   }

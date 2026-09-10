@@ -74,4 +74,27 @@ describe("citation gate", () => {
     expect(result.verdict).toBe("escalate");
     expect(result.reasons.join(" ")).toMatch(/stale-deadline/);
   });
+
+  it("tolerates a citation claim that merges two answer sentences", () => {
+    // Real-LLM failure mode from the live eval: model cites "Sentence A. Sentence B."
+    // as one claim while the answer text splits them. Coverage, not exact equality.
+    const doc = byId(corpus, "participation.registration")!;
+    const text =
+      "One person from each team will Enter a Submission. Where it asks you to add your teammates' email addresses, use the same ones they used to create their Devpost accounts.";
+    const draft: AnswerDraft = {
+      text,
+      citations: [{ claim: text, docId: "participation.registration" }],
+    };
+    expect(verifyDraft(draft, [doc]).verdict).toBe("pass");
+  });
+
+  it("still blocks a drifting claim after stemming normalization", () => {
+    const draft: AnswerDraft = {
+      text: "Our sponsors will personally review every project.",
+      citations: [
+        { claim: "Our sponsors will personally review every project.", docId: "eligibility.rules_text" },
+      ],
+    };
+    expect(verifyDraft(draft, eligibilityDocs).verdict).toBe("escalate");
+  });
 });

@@ -16,10 +16,18 @@ export interface AuditEvent {
 export class AuditLog {
   private events: AuditEvent[] = [];
 
+  constructor(private sink?: (event: AuditEvent) => void) {}
+
   record(kind: AuditEvent["kind"], summary: string, detail?: unknown): AuditEvent {
     const event: AuditEvent = { ts: new Date().toISOString(), kind, summary, detail };
     this.events.push(event);
+    this.sink?.(event);
     return event;
+  }
+
+  /** Preload events from a previous run (persistence). */
+  restore(events: AuditEvent[]): void {
+    this.events.push(...events);
   }
 
   list(): readonly AuditEvent[] {

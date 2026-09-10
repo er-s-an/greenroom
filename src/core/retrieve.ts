@@ -10,11 +10,20 @@ const STOPWORDS = new Set([
   "that", "these", "those", "am", "per",
 ]);
 
+/** Light stemming: plural/ies normalization so "projects"≈"project", "categories"≈"category". */
+function stem(token: string): string {
+  if (token.length <= 3) return token;
+  if (token.endsWith("ies")) return token.slice(0, -3) + "y";
+  if (token.endsWith("s") && !token.endsWith("ss")) return token.slice(0, -1);
+  return token;
+}
+
 export function tokenize(text: string): string[] {
   return text
     .toLowerCase()
     .split(/[^a-z0-9]+/)
-    .filter((t) => t.length > 1 && !STOPWORDS.has(t));
+    .filter((t) => t.length > 1 && !STOPWORDS.has(t))
+    .map(stem);
 }
 
 export interface Hit {

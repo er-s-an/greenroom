@@ -7,7 +7,7 @@ pnpm install
 pnpm test
 ```
 
-28 unit tests cover the safety properties:
+38 unit tests cover the safety properties:
 
 | Property | Test |
 |---|---|

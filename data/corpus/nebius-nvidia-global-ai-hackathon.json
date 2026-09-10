@@ -1,0 +1,71 @@
+{
+  "event": "nebius-nvidia-global-ai-hackathon",
+  "curatedAt": "2026-09-11",
+  "note": "Second corpus — proves the pipeline is not hardcoded to one event. Quotes the official rules verbatim.",
+  "docs": [
+    {
+      "id": "dates.rules",
+      "title": "Official dates (rules)",
+      "body": "Submission Period: Wednesday, August 26, 2026 (9:00 am Pacific Time) – Friday, October 30, 2026 (10:00 am Pacific Time). Judging Period: Tuesday, December 1, 2026 (9:00 am Pacific Time) – Tuesday, December 15, 2026 (12:00 pm Pacific Time). Winners Announced: On or around Monday, January 11, 2027 (12:00 pm Pacific Time).",
+      "source": { "kind": "dossier", "ref": "rules > 1. Dates and Timing", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:dates", "deadline"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "eligibility.open",
+      "title": "Who may enter",
+      "body": "The Hackathon IS open to: Individuals who are at least the age of majority where they reside as of the time of entry; Teams of Eligible Individuals; and Organizations (including corporations, not-for-profit corporations and other nonprofit organizations, limited liability companies, partnerships, and other legal entities) that exist and have been organized or incorporated at the time of entry. An Eligible Individual may join more than one Team or Organization.",
+      "source": { "kind": "dossier", "ref": "rules > 3. Eligibility", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:eligibility", "who", "organizations-welcome"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "eligibility.closed",
+      "title": "Who may NOT enter",
+      "body": "The Hackathon IS NOT open to: Individuals who are residents of, or Organizations domiciled in, a country, state, province or territory where the laws of the United States or local law prohibits participating or receiving a prize in the Hackathon (including, but not limited to, Brazil, Quebec, Russia, Crimea, Cuba, Iran, and North Korea).",
+      "source": { "kind": "dossier", "ref": "rules > 3. Eligibility", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:eligibility", "restriction"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "entry.how",
+      "title": "How to enter",
+      "body": "Entrants may enter by visiting nebiusglobalaihackathon.devpost.com and clicking the 'Join Hackathon' button. To complete registration, sign up to create a free Devpost account, or log in with an existing Devpost account. Entrants can join the Nebius Builder Program and get credits for Nebius Token Factory, Tavily, and Nebius Academy — plus training, office hours, and access to the builder community.",
+      "source": { "kind": "dossier", "ref": "rules > 4. How To Enter", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:registration", "credits", "builder-program"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "submission.modifications",
+      "title": "Editing submissions after the deadline",
+      "body": "Prior to the end of the Submission Period, you may save draft versions of your submission on Devpost to your portfolio. Once the Submission Period has ended, you may not make any changes or alterations to your Submission, but you may continue to update the Project in your Devpost portfolio.",
+      "source": { "kind": "dossier", "ref": "rules > 5. Submission Modifications", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:submission", "editing", "deadline"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "judging.stages",
+      "title": "Two-stage judging",
+      "body": "Stage One: pass/fail whether the ideas meet a baseline level of viability — the Project reasonably fits the theme and reasonably applies the required APIs/SDKs featured in the Hackathon. A Project reasonably fits the theme if it is a genuine attempt at the track's stated goal, not a superficial rebrand of an unrelated idea. Stage Two: all Submissions that pass Stage One are evaluated on equally weighted judging criteria, including Technological Implementation: how well is the project built, and how effectively does it use Nebius Token Factory or AI Cloud models.",
+      "source": { "kind": "dossier", "ref": "rules > 6. Judges & Criteria", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:judging", "criteria", "theme-gate"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "ip.rights",
+      "title": "Intellectual property",
+      "body": "All Submissions remain the intellectual property of the individuals or organizations that developed them. By submitting an entry, entrants agree that the Sponsor will have a non-exclusive license to use such entry for judging the entry.",
+      "source": { "kind": "dossier", "ref": "rules > 7. Intellectual Property Rights", "url": "https://nebiusglobalaihackathon.devpost.com/rules" },
+      "tags": ["topic:ip", "rights"],
+      "asOf": "2026-09-11"
+    },
+    {
+      "id": "event.meta",
+      "title": "Event facts",
+      "body": "The Nebius x NVIDIA Global AI Hackathon is for AI builders, ML engineers, founders, and anyone shipping practical, high-performance AI. Participants build with NVIDIA open source models served on Nebius through Nebius Token Factory, on high performance GPU infrastructure. Sponsor: Nebius B.V., Schiphol, the Netherlands. Administrator: Devpost, Inc.",
+      "source": { "kind": "dossier", "ref": "overview + rules > 2. Sponsor and Administrator", "url": "https://nebiusglobalaihackathon.devpost.com" },
+      "tags": ["topic:event", "host", "sponsor"],
+      "asOf": "2026-09-11"
+    }
+  ]
+}

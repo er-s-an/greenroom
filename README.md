@@ -56,12 +56,21 @@ Design rule: **all decisions are deterministic and tested; the LLM only writes w
 
 ```bash
 pnpm install
-pnpm test          # 25 unit tests: gate, pipeline, radar, approvals
+pnpm test          # 38 unit tests: gate, pipeline, radar, approvals, persistence, generalization
 pnpm sim "Can companies participate?" "when is the deadline?"
 pnpm sim:radar     # full radar → draft → approve → audit loop on the seed community
+pnpm sim:report    # ends in a sponsor report computed from live state
 ```
 
-Hosted LLM (optional): set `KIMI_CODE_API_KEY` (uses Kimi K2.7 via the OpenAI-compatible `https://api.kimi.com/coding/v1` endpoint). Without a key, everything runs on the deterministic offline mock — including the demo.
+Hosted LLM (optional): set `KIMI_CODE_API_KEY` + `LLM=kimi` (uses Kimi K2.7 via the OpenAI-compatible `https://api.kimi.com/coding/v1` endpoint). Without a key, everything runs on the deterministic offline mock — including the demo.
+
+## Quality evidence
+
+- **Live adversarial eval** (`scripts/eval-live.mts`, not in CI — costs API quota): 23 real-user-style questions against hosted Kimi K2.7 — paraphrases, typos, a non-English question, stale-deadline traps, fabrication bait, off-topic. Every on-topic question answered with valid citations; every unanswerable one escalated; the stale deadline always acknowledged; the documentation-conflict alert fired where expected.
+- **Repair loop**: when the gate rejects a draft, the LLM gets one retry with the gate's exact rejection reasons before a human is bothered. Wording problems get fixed; fabrications still escalate.
+- **Generalization**: `test/generalize.test.ts` runs the identical pipeline on a second hackathon's official rules (Nebius × NVIDIA) with zero tuning — including the same eligibility question, which correctly gets the *opposite* answer (that event welcomes companies).
+- **Persistence**: community events are appended to JSONL (replayed on boot), the audit trail is an append-only JSONL log, and approvals snapshot to disk on every mutation. Restart the server — nothing is lost.
+- **UI smoke test**: `scripts/e2e.mts` boots the real server and drives the dashboard in a real browser — money moment, escalation, approval flow, audit, report.
 
 ## Privacy stance
 

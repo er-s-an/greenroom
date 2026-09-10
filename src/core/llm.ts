@@ -14,13 +14,18 @@ export interface OutreachInput {
   context: string;
 }
 
+export interface DraftOptions {
+  /** Gate-rejection reasons from a previous attempt; the provider should repair them. */
+  repairHints?: string[];
+}
+
 /**
  * The LLM never decides *whether* the copilot may act — the gates do.
  * Providers only draft wording and propose contradiction candidates.
  */
 export interface LlmProvider {
   name: string;
-  draftAnswer(question: string, docs: CorpusDoc[]): Promise<AnswerDraft>;
+  draftAnswer(question: string, docs: CorpusDoc[], opts?: DraftOptions): Promise<AnswerDraft>;
   checkContradiction(a: CorpusDoc, b: CorpusDoc): Promise<ContradictionVerdict>;
   draftOutreach(input: OutreachInput): Promise<string>;
 }
@@ -165,16 +170,20 @@ export class KimiLlm implements LlmProvider {
     return data.choices?.[0]?.message?.content ?? "";
   }
 
-  async draftAnswer(question: string, docs: CorpusDoc[]): Promise<AnswerDraft> {
+  async draftAnswer(question: string, docs: CorpusDoc[], opts?: DraftOptions): Promise<AnswerDraft> {
     const context = docs.map((d) => `DOC ${d.id} (${d.title}):\n${d.body}`).join("\n\n");
+    const repair = opts?.repairHints?.length
+      ? `\n\nYour previous draft was REJECTED by the citation gate for these reasons:\n${opts.repairHints.map((h) => `- ${h}`).join("\n")}\nFix all of them. Do NOT paraphrase: copy the relevant source sentence(s) verbatim — you may quote them inside your answer — and make each cited claim exactly match a sentence of your answer.`
+      : "";
     const raw = await this.call(
-      "You are a community FAQ assistant. You may ONLY use the provided documents, stay close to their wording, and cite every sentence. Output JSON only.",
+      "You are a community FAQ assistant. You may ONLY use the provided documents and must cite every sentence. Output JSON only.",
       `Answer the question in 1-4 sentences.
+Rules: stay near-verbatim to the source wording; for dates, lists, and exclusions, quote the source line exactly rather than rephrasing it.
 Output JSON: {"sentences":[{"text":"...","docId":"..."}]}. Every sentence needs a docId from the documents below. If the documents do not answer the question, output {"sentences":[]}.
 
 ${context}
 
-QUESTION: ${question}`,
+QUESTION: ${question}${repair}`,
     );
     const parsed = parseJson<{ sentences: { text: string; docId: string }[] }>(raw);
     return {

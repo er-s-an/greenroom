@@ -17,6 +17,7 @@ import {
 import { ApprovalQueue, type OutreachDraft } from "../core/approvals.js";
 import { AuditLog } from "../core/audit.js";
 import { generateReport } from "../core/report.js";
+import { FileStore } from "./store.js";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const rootDir = join(here, "..", "..");
@@ -48,15 +49,28 @@ for (const e of seed.events) {
   community.ingest({ ...e, at: new Date(e.at).getTime() } as RadarEvent);
 }
 
-const audit = new AuditLog();
+// --- persistence: survive restarts -----------------------------------------
+const store = new FileStore(process.env.GREENROOM_DATA_DIR ?? join(rootDir, "data/runtime"));
+for (const e of store.loadEvents()) {
+  community.ingest(e);
+}
+
+const audit = new AuditLog((e) => store.appendAudit(e));
+audit.restore(store.loadAudit());
+const hasRecordedFindings = audit.list().some((e) => e.kind === "contradiction.found");
+
 const sent: OutreachDraft[] = [];
-const queue = new ApprovalQueue({
-  send: (draft) => {
-    sent.push(draft);
+const queue = new ApprovalQueue(
+  {
+    send: (draft) => {
+      sent.push(draft);
+    },
+    audit,
+    now: () => now,
   },
-  audit,
-  now: () => now,
-});
+  store.loadApprovals(),
+);
+const persistDrafts = () => store.saveApprovals(queue.all());
 
 let findings: ContradictionFinding[] = [];
 
@@ -74,7 +88,7 @@ app.get("/api/radar", async () => scan(community, { now, deadlineAt }));
 
 app.post("/api/radar/draft", async () => {
   const flags = scan(community, { now, deadlineAt });
-  const existing = allDrafts();
+  const existing = queue.all();
   const fresh = flags.filter(
     (f) =>
       !existing.some(
@@ -82,11 +96,12 @@ app.post("/api/radar/draft", async () => {
       ),
   );
   const ids = await draftOutreachForFlags(fresh, llm, queue, audit);
+  persistDrafts();
   return { created: ids.map((id) => queue.get(id)).filter((d): d is OutreachDraft => !!d) };
 });
 
 app.get("/api/approvals", async () => {
-  const drafts = allDrafts();
+  const drafts = queue.all();
   return [...drafts].sort((a, b) => {
     const rank = (d: OutreachDraft) => (d.status === "pending" ? 0 : 1);
     return rank(a) - rank(b) || a.createdAt - b.createdAt;
@@ -149,16 +164,6 @@ app.post("/api/ask", async (req, reply) => {
   return result;
 });
 
-function allDrafts(): OutreachDraft[] {
-  const out: OutreachDraft[] = [];
-  for (let n = 1; ; n++) {
-    const d = queue.get(`od-${n}`);
-    if (!d) break;
-    out.push(d);
-  }
-  return out;
-}
-
 const webDist = join(rootDir, "web", "dist");
 await app.register(fastifyStatic, { root: webDist });
 app.setNotFoundHandler((req, reply) => {
@@ -172,8 +177,10 @@ const port = Number(process.env.PORT ?? 3000);
 
 async function main() {
   findings = await scanCorpus(corpus, llm, registry);
-  for (const f of findings) {
-    audit.record("contradiction.found", `${f.pair.join(" × ")} (${f.severity})`, f);
+  if (!hasRecordedFindings) {
+    for (const f of findings) {
+      audit.record("contradiction.found", `${f.pair.join(" × ")} (${f.severity})`, f);
+    }
   }
   await app.listen({ port, host: "127.0.0.1" });
   console.log(`greenroom server listening on http://localhost:${port} (llm: ${llm.name})`);
