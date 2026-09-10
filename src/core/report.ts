@@ -21,7 +21,7 @@ export interface ReportInput {
 
 const STATES: MemberState[] = ["registered", "joined", "introduced", "active", "submitted"];
 
-function countBy<T>(items: T[], key: (item: T) => string): Map<string, number> {
+function countBy<T>(items: readonly T[], key: (item: T) => string): Map<string, number> {
   const m = new Map<string, number>();
   for (const item of items) m.set(key(item), (m.get(key(item)) ?? 0) + 1);
   return m;
