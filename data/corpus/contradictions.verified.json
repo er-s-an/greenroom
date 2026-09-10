@@ -1,0 +1,11 @@
+{
+  "verifiedAt": "2026-09-10",
+  "findings": [
+    {
+      "pair": ["eligibility.rules_text", "eligibility.structured"],
+      "severity": "high",
+      "explanation": "Rules prose welcomes 'Startup founders and entrepreneurs' and 'participants from around the world', while the structured eligibility settings say 'Students only' and 'Companies/professional organizations excluded from participation'. A non-student founder receives opposite answers depending on which source they read.",
+      "verifiedBy": "human review during corpus curation (2026-09-10)"
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "event": "ai-builders-hackathon-2026",
+  "curatedAt": "2026-09-10",
+  "note": "Every document quotes official sources verbatim (Devpost MCP raw export 2026-09-10) or cites the public Devpost listing. The eligibility pair is intentionally both included: they contradict each other, which is the point.",
+  "docs": [
+    {
+      "id": "dates.rules",
+      "title": "Official dates (rules page)",
+      "body": "Registration Opens: 16 June 2026. Hackathon Begins: 21 August 2026. Project Submission Deadline: 15 September 2026. Judging Period: 16 September 2026 - 20 September 2026. Winners Announcement: September 2026. Participants will have 25 days to design, build, test, and submit their AI-powered solutions.",
+      "source": { "kind": "dossier", "ref": "rules > terms_and_conditions > Dates", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:dates", "deadline", "schedule"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "dates.announcement",
+      "title": "Deadline with exact time (announcement)",
+      "body": "You need to register now and submit your projects before the deadline (Tue Sep 15, 2026 at 11:00 PM EDT).",
+      "source": { "kind": "dossier", "ref": "announcements > 'Get setup with Devpost for AI Builders Hackathon' (2026-08-20)", "url": "https://ai-builders-hackathon-2026.devpost.com/" },
+      "tags": ["topic:dates", "deadline"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "eligibility.rules_text",
+      "title": "Eligibility — rules prose",
+      "body": "The AI Builders Hackathon is open to participants from around the world. Eligible participants include: Students and recent graduates, Software developers and engineers, AI/ML practitioners and researchers, Designers and product builders, Startup founders and entrepreneurs, Open-source contributors and technology enthusiasts. Participants may compete individually or as a team. No prior hackathon experience is required.",
+      "source": { "kind": "dossier", "ref": "rules > terms_and_conditions > Eligibility", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:eligibility", "who", "founders-welcome"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "eligibility.structured",
+      "title": "Eligibility — structured settings",
+      "body": "Above legal age of majority in country of residence. Students only. Companies/professional organizations excluded from participation. All countries/territories, excluding standard exceptions: Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia.",
+      "source": { "kind": "dossier", "ref": "rules > eligibility > summary_lines (structured fields)", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:eligibility", "who", "restriction", "students-only", "companies-excluded"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "submission.requirements",
+      "title": "What a submission must include",
+      "body": "All submissions must be created during the hackathon period and align with the theme of Artificial Intelligence, Agentic AI, or Intelligent Systems. Your submission must include: A project title and description; A publicly accessible source code repository (GitHub, GitLab, etc.); A demo video (3–5 minutes recommended); Documentation explaining the problem, solution, and technology used; Team member details.",
+      "source": { "kind": "dossier", "ref": "rules > Project and Submission Requirements", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:submission", "requirements", "video", "repo"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "submission.categories",
+      "title": "Allowed project categories",
+      "body": "Projects may include: AI Agents and Multi-Agent Systems; AI Assistants and Copilots; Workflow Automation Solutions; AI for Education, Healthcare, Finance, Research, or Productivity; Developer Tools powered by AI; Innovative Generative AI Applications.",
+      "source": { "kind": "dossier", "ref": "rules > Project and Submission Requirements", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:submission", "categories", "scope"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "submission.iterating",
+      "title": "You can keep editing until the deadline",
+      "body": "Submit early and include as much information as you can, so you won't be rushed toward the end. And remember, you can keep updating your project until the deadline.",
+      "source": { "kind": "dossier", "ref": "announcements > 'Get setup with Devpost' (2026-08-20)", "url": "https://ai-builders-hackathon-2026.devpost.com/" },
+      "tags": ["topic:submission", "deadline", "editing"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "judging.criteria",
+      "title": "Judging criteria (rules page)",
+      "body": "Judging will consider: Innovation and originality; Technical implementation; Real-world impact; User experience and design; Scalability and feasibility. Participants are encouraged to build solutions that address meaningful challenges and demonstrate how AI can create measurable value for individuals, businesses, or communities.",
+      "source": { "kind": "dossier", "ref": "rules > Judging Criteria and Winner Selection", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:judging", "criteria"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "judging.weights",
+      "title": "Judging weights (public listing)",
+      "body": "Per the public Devpost listing: Technical 25%, Problem Solving & Impact 25%, Innovation 20%, UX 15%, Presentation 15%. 19 judges listed from Apple, PayPal, Microsoft, IBM, Visa, AWS, Fidelity, ServiceNow and others.",
+      "source": { "kind": "web", "ref": "Devpost hackathon listing & judges page, fetched 2026-09-10", "url": "https://ai-builders-hackathon-2026.devpost.com/judges" },
+      "tags": ["topic:judging", "weights", "judges"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "prize.best_saas",
+      "title": "Best SaaS Product — $4,000 cash",
+      "body": "Best SaaS Product: $4,000 cash, 1 winner. Description: 'Top IDEAS will get Exposure'.",
+      "source": { "kind": "dossier", "ref": "prizes > Best SaaS Product", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:prizes", "cash", "saas"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "prize.nexfellow",
+      "title": "NexFellow awards (3)",
+      "body": "NexFellow Founder's Choice Award: 3 Months of NexFellow Founder Plan for the most compelling AI product with strong user value and founder potential. NexFellow Product Excellence Award: 2 Months for the best executed product with excellent usability, technical quality, and real world value. NexFellow Innovation Award: 1 Month for the most creative and technically innovative use of AI.",
+      "source": { "kind": "dossier", "ref": "prizes > NexFellow awards", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:prizes", "nexfellow", "sponsor"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "prize.tin_credits",
+      "title": "Tin Computer credits — $299 × first 100 teams",
+      "body": "The first 100 eligible AI Builders Hackathon teams can each claim $299 in Tin Computer credits, equivalent to one month of the Tin Computer Growth Plan. Credits are available exclusively to official participating teams, with one claim per team. No credit card, payment, paperwork, or ongoing commitment is required. The claim window remains open for 60 days from the date the page goes live, first come, first served.",
+      "source": { "kind": "dossier", "ref": "prizes > Tin Computer Credits", "url": "https://ai-builders-hackathon-2026.devpost.com/rules" },
+      "tags": ["topic:prizes", "tin", "sponsor", "credits"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "participation.discord",
+      "title": "Discord is mandatory",
+      "body": "Joining our Discord server is mandatory for all participants, as all important hackathon updates, announcements, discussions, and community interactions will happen there. Once you join: 1. Introduce yourself in #introductions and share a short introduction along with your country name. 2. Join the conversation in #ai-builders-hackathon.",
+      "source": { "kind": "dossier", "ref": "announcements > 'Join the AI Builders Hackathon Discord' (2026-09-03)", "url": "https://discord.com/invite/umEXASsAev" },
+      "tags": ["topic:discord", "mandatory", "onboarding", "introductions"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "participation.registration",
+      "title": "How to register and submit",
+      "body": "Have EVERY person on your team go to the hackathon page and click Register (you must all create Devpost accounts). One person from each team will Enter a Submission. Where it asks you to add your teammates' email addresses, use the same ones they used to create their Devpost accounts.",
+      "source": { "kind": "dossier", "ref": "announcements > 'Get setup with Devpost' (2026-08-20)", "url": "https://ai-builders-hackathon-2026.devpost.com/" },
+      "tags": ["topic:registration", "teams", "submission"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "participation.certificates",
+      "title": "Certificates of participation",
+      "body": "Certificates of Participation will be awarded to all eligible participants who meet the participation requirements.",
+      "source": { "kind": "dossier", "ref": "announcements > 'Join Our Discord Community' (2026-08-12)", "url": "https://ai-builders-hackathon-2026.devpost.com/" },
+      "tags": ["topic:certificates", "participation"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "sponsor.algoverse",
+      "title": "Algoverse program (note: deadline passed)",
+      "body": "Algoverse is an AI research program for college students. Application deadline: Sunday, August 23 at 11:59 PM PT. NOTE: as of 2026-09-10 this application deadline has passed; a correct assistant must say so rather than inviting applications.",
+      "source": { "kind": "dossier", "ref": "announcements > 'Welcome Algoverse as an official sponsor!' (2026-08-22)", "url": "https://algoverseairesearch.org/" },
+      "tags": ["topic:sponsors", "algoverse", "trap-stale-deadline"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "sponsor.nexfellow",
+      "title": "What NexFellow is",
+      "body": "NexFellow connects builders with experienced people who provide honest, actionable product feedback so founders can validate ideas, improve their products, and launch faster.",
+      "source": { "kind": "dossier", "ref": "announcements > 'Welcome NexFellow as an official sponsor!' (2026-08-22)", "url": "https://www.nexfellow.com/" },
+      "tags": ["topic:sponsors", "nexfellow"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "event.meta",
+      "title": "Event facts",
+      "body": "Host: OSC (Open Source Connect). Online event. Status: submissions open. Public URL: https://ai-builders-hackathon-2026.devpost.com. Theme: 'Building the Future of Intelligent Systems. The Internet Needs Better AI.' Participants per public listing on 2026-09-10: 3,063.",
+      "source": { "kind": "dossier", "ref": "overview + Devpost public listing", "url": "https://ai-builders-hackathon-2026.devpost.com" },
+      "tags": ["topic:event", "host", "scale"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "event.spirit",
+      "title": "What organizers are looking for",
+      "body": "The world doesn't need another AI demo. We are not looking for pitch decks, concept videos, or AI wrappers with minimal differentiation. We are looking for products that demonstrate thoughtful problem solving, strong technical execution, excellent user experience, and clear value for users. The best submissions will be those that people can actually use, adopt, and recommend.",
+      "source": { "kind": "dossier", "ref": "overview > About the challenge", "url": "https://ai-builders-hackathon-2026.devpost.com" },
+      "tags": ["topic:event", "spirit", "anti-wrapper"],
+      "asOf": "2026-09-10"
+    },
+    {
+      "id": "contact.organizers",
+      "title": "Contacting the organizers",
+      "body": "Questions can be posted on the hackathon discussion forum, or emailed to hello@osconnect.org.",
+      "source": { "kind": "dossier", "ref": "announcements (2026-08-12, 2026-06-26)", "url": "https://ai-builders-hackathon-2026.devpost.com/forum_topics" },
+      "tags": ["topic:contact", "organizers"],
+      "asOf": "2026-09-10"
+    }
+  ]
+}
