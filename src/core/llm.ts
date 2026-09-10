@@ -152,6 +152,8 @@ export class KimiLlm implements LlmProvider {
       body: JSON.stringify({
         model: this.model,
         temperature: 0.2,
+        // K2.7 reasons before answering; leave headroom or content comes back empty.
+        max_tokens: 4096,
         messages: [
           { role: "system", content: system },
           { role: "user", content: prompt },
