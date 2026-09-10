@@ -74,7 +74,8 @@ export async function answerQuestion(
 
   // One repair attempt with the gate's exact rejection reasons before
   // bothering a human — wording problems are fixable, fabrications are not.
-  if (gate.verdict === "escalate") {
+  // A deliberately empty draft is a refusal, not a wording problem: don't retry.
+  if (gate.verdict === "escalate" && draft.text.trim().length > 0) {
     draft = await llm.draftAnswer(question, contextDocs, { repairHints: gate.reasons });
     const secondGate = verifyDraft(draft, contextDocs);
     if (secondGate.verdict === "pass") {

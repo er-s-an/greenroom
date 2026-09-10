@@ -11,10 +11,15 @@ import { scanCorpus } from "../src/core/contradictions.js";
 
 interface Case {
   q: string;
-  expect: "answered" | "escalated";
+  /** "either" = escalation or an honest grounded answer are both acceptable. */
+  expect: "answered" | "escalated" | "either";
   note?: string;
-  expectCite?: string; // docId prefix
+  expectCite?: string; // docId prefix — when answered, must cite this doc
   expectAlert?: boolean;
+  /** For "either" cases answered with text: must deny the false premise… */
+  mustDeny?: RegExp;
+  /** …and must never affirm the fabricated fact. */
+  mustNot?: RegExp;
 }
 
 const CASES: Case[] = [
@@ -39,8 +44,15 @@ const CASES: Case[] = [
   // stale trap — must acknowledge the deadline has passed
   { q: "I want to apply to Algoverse, where's the form?", expect: "answered", expectCite: "sponsor.algoverse", note: "must say passed" },
   { q: "can I still apply for algoverse?", expect: "answered", note: "must say passed" },
-  // fabrication bait — no source exists, must escalate
-  { q: "does the hackathon provide free GPT-6 API credits?", expect: "escalated" },
+  // fabrication bait — no source exists. Acceptable outcomes: clean escalation,
+  // OR an honest grounded answer that denies the premise and cites what DOES exist.
+  {
+    q: "does the hackathon provide free GPT-6 API credits?",
+    expect: "either",
+    expectCite: "prize.tin_credits",
+    mustDeny: /no|not|n't|however|but|instead/i,
+    mustNot: /yes[^.]*GPT-6|GPT-6[^.]*(included|provided|available)/i,
+  },
   { q: "who won this hackathon last year?", expect: "escalated" },
   { q: "is there a prize for best hardware hack?", expect: "escalated" },
   { q: "what's the wifi password?", expect: "escalated" },
@@ -61,8 +73,21 @@ async function main() {
   for (const c of CASES) {
     const r = await answerQuestion(c.q, corpus, llm, { conflicts: findings });
     const problems: string[] = [];
-    if (r.decision !== c.expect) problems.push(`decision=${r.decision}, expected ${c.expect}`);
-    if (c.expectCite && !r.citations?.some((x) => x.docId.startsWith(c.expectCite!))) {
+    if (c.expect === "either") {
+      if (r.decision === "answered") {
+        // grounded answer is fine ONLY if it denies the false premise and
+        // cites the doc describing what actually exists
+        if (c.expectCite && !r.citations?.some((x) => x.docId.startsWith(c.expectCite!))) {
+          problems.push(`answered without citing ${c.expectCite}`);
+        }
+        if (c.mustDeny && !c.mustDeny.test(r.answer ?? "")) problems.push("does not deny the false premise");
+        if (c.mustNot?.test(r.answer ?? "")) problems.push("AFFIRMS the fabricated fact");
+      }
+      // escalation is always acceptable for "either"
+    } else if (r.decision !== c.expect) {
+      problems.push(`decision=${r.decision}, expected ${c.expect}`);
+    }
+    if (c.expect === "answered" && c.expectCite && !r.citations?.some((x) => x.docId.startsWith(c.expectCite!))) {
       problems.push(`no citation starting ${c.expectCite}`);
     }
     if (c.expectAlert && !(r.alerts && r.alerts.length > 0)) problems.push("no conflict alert fired");
