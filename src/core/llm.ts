@@ -1,4 +1,4 @@
-import type { AnswerDraft, CorpusDoc, Severity } from "./types.js";
+import type { AnswerDraft, CorpusDoc, Severity, StallKind } from "./types.js";
 import { tokenize } from "./retrieve.js";
 
 export interface ContradictionVerdict {
@@ -7,14 +7,22 @@ export interface ContradictionVerdict {
   explanation: string;
 }
 
+export interface OutreachInput {
+  handle: string;
+  kind: StallKind;
+  /** Organizer-facing context, e.g. "registered 4 days ago, never joined". */
+  context: string;
+}
+
 /**
- * The LLM never decides *whether* the copilot may speak — the gate does.
+ * The LLM never decides *whether* the copilot may act — the gates do.
  * Providers only draft wording and propose contradiction candidates.
  */
 export interface LlmProvider {
   name: string;
   draftAnswer(question: string, docs: CorpusDoc[]): Promise<AnswerDraft>;
   checkContradiction(a: CorpusDoc, b: CorpusDoc): Promise<ContradictionVerdict>;
+  draftOutreach(input: OutreachInput): Promise<string>;
 }
 
 export function splitSentences(text: string): string[] {
@@ -31,6 +39,22 @@ function overlapScore(question: Set<string>, sentence: string): number {
   for (const t of tokens) if (question.has(t)) hit++;
   return hit / tokens.length;
 }
+
+/** Parse JSON from a model response, tolerating code fences. */
+function parseJson<T>(raw: string): T {
+  return JSON.parse(raw.replace(/```json|```/g, "").trim()) as T;
+}
+
+const OUTREACH_TEMPLATES: Record<StallKind, (handle: string) => string> = {
+  "registered-no-join": (h) =>
+    `Hi ${h}! You registered for the hackathon but haven't joined the Discord server yet — that's where all announcements, teammate matching, and support happen. Come say hi, it takes two minutes.`,
+  "joined-no-intro": (h) =>
+    `Hi ${h}, welcome! Quick nudge: please introduce yourself in #introductions with a line about you and your country — it's how teammates find each other (and it's part of the participation requirements).`,
+  "gone-quiet": (h) =>
+    `Hi ${h} — you introduced yourself a while back but we've missed you lately. Anything blocking you? Happy to help you find a teammate, scope an idea, or answer questions.`,
+  "missing-submission": (h) =>
+    `Hi ${h}! The submission deadline is close and we don't see a submission linked to you yet. Remember: you can submit early and keep editing until the deadline. Need any help getting it in?`,
+};
 
 /**
  * Deterministic offline provider: drafts answers extractively (near-verbatim
@@ -93,53 +117,64 @@ export class MockLlm implements LlmProvider {
     }
     return { isContradiction: false, severity: "low", explanation: "" };
   }
+
+  async draftOutreach(input: OutreachInput): Promise<string> {
+    return OUTREACH_TEMPLATES[input.kind](input.handle);
+  }
 }
 
 /**
- * Hosted provider (Gemini Flash class). The prompt contract forces per-sentence
- * near-verbatim citation so the deterministic gate can still verify output.
- * Needs GEMINI_API_KEY; deliberately unused in tests.
+ * Hosted provider: Kimi for Coding (K2.7), OpenAI-compatible protocol.
+ * Endpoint and model id per official docs (https://www.kimi.com/code/docs/en/):
+ *   POST https://api.kimi.com/coding/v1/chat/completions, model "kimi-for-coding".
+ * The prompt contract forces per-sentence near-verbatim citation so the
+ * deterministic gate can still verify output. Key from KIMI_CODE_API_KEY;
+ * deliberately unused in tests.
  */
-export class GeminiLlm implements LlmProvider {
-  name = "gemini";
+export class KimiLlm implements LlmProvider {
+  name = "kimi-for-coding";
+
   constructor(
-    private apiKey: string | undefined = process.env.GEMINI_API_KEY,
-    private model = "gemini-3.8-flash",
+    private apiKey: string | undefined = process.env.KIMI_CODE_API_KEY,
+    private model = "kimi-for-coding",
+    private baseUrl = process.env.KIMI_BASE_URL ?? "https://api.kimi.com/coding/v1",
   ) {
-    if (!apiKey) throw new Error("GEMINI_API_KEY is not set");
+    if (!apiKey) throw new Error("KIMI_CODE_API_KEY is not set");
   }
 
-  private async call(prompt: string): Promise<string> {
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${this.apiKey}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  private async call(system: string, prompt: string): Promise<string> {
+    const res = await fetch(`${this.baseUrl}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${this.apiKey}`,
       },
-    );
-    if (!res.ok) throw new Error(`Gemini ${res.status}: ${await res.text()}`);
-    const data = (await res.json()) as {
-      candidates?: { content?: { parts?: { text?: string }[] } }[];
-    };
-    return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
+      body: JSON.stringify({
+        model: this.model,
+        temperature: 0.2,
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
+      }),
+    });
+    if (!res.ok) throw new Error(`Kimi API ${res.status}: ${await res.text()}`);
+    const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
+    return data.choices?.[0]?.message?.content ?? "";
   }
 
   async draftAnswer(question: string, docs: CorpusDoc[]): Promise<AnswerDraft> {
-    const context = docs
-      .map((d) => `DOC ${d.id} (${d.title}):\n${d.body}`)
-      .join("\n\n");
-    const prompt = `You are a community FAQ assistant that may ONLY use the documents below.
-Answer the question in 1-4 sentences. Each sentence must stay close to the source wording.
-Output JSON: {"sentences":[{"text":"...","docId":"..."}]}. Every sentence needs a docId. If the documents do not answer the question, output {"sentences":[]}.
+    const context = docs.map((d) => `DOC ${d.id} (${d.title}):\n${d.body}`).join("\n\n");
+    const raw = await this.call(
+      "You are a community FAQ assistant. You may ONLY use the provided documents, stay close to their wording, and cite every sentence. Output JSON only.",
+      `Answer the question in 1-4 sentences.
+Output JSON: {"sentences":[{"text":"...","docId":"..."}]}. Every sentence needs a docId from the documents below. If the documents do not answer the question, output {"sentences":[]}.
 
 ${context}
 
-QUESTION: ${question}`;
-    const raw = await this.call(prompt);
-    const parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()) as {
-      sentences: { text: string; docId: string }[];
-    };
+QUESTION: ${question}`,
+    );
+    const parsed = parseJson<{ sentences: { text: string; docId: string }[] }>(raw);
     return {
       text: parsed.sentences.map((s) => s.text).join(" "),
       citations: parsed.sentences.map((s) => ({ claim: s.text, docId: s.docId })),
@@ -147,11 +182,21 @@ QUESTION: ${question}`;
   }
 
   async checkContradiction(a: CorpusDoc, b: CorpusDoc): Promise<ContradictionVerdict> {
-    const prompt = `Do these two official documents give conflicting answers to the same audience about the same topic?
+    const raw = await this.call(
+      "You detect contradictions between official documents. Output JSON only.",
+      `Do these two official documents give conflicting answers to the same audience about the same topic?
 DOC A (${a.title}): ${a.body}
 DOC B (${b.title}): ${b.body}
-Output JSON: {"isContradiction":bool,"severity":"low|medium|high","explanation":"one sentence"}`;
-    const raw = await this.call(prompt);
-    return JSON.parse(raw.replace(/```json|```/g, "").trim()) as ContradictionVerdict;
+Output JSON: {"isContradiction":bool,"severity":"low|medium|high","explanation":"one sentence"}`,
+    );
+    return parseJson<ContradictionVerdict>(raw);
+  }
+
+  async draftOutreach(input: OutreachInput): Promise<string> {
+    const raw = await this.call(
+      "You draft short, warm Discord direct messages on behalf of a hackathon organizer. 2-3 sentences, no emojis, no invented facts, one clear next step. Plain text only.",
+      `Draft a nudge for participant "${input.handle}". Situation: ${input.context}. Reason code: ${input.kind}.`,
+    );
+    return raw.trim();
   }
 }

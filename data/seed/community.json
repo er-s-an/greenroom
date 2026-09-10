@@ -1,0 +1,56 @@
+{
+  "note": "Synthetic replica community for demo/development. 'now' is 2026-09-13T06:00Z, 69h before the real submission deadline (Sep 15 23:00 EDT = Sep 16 03:00Z). No real people.",
+  "now": "2026-09-13T06:00:00Z",
+  "deadline": "2026-09-16T03:00:00Z",
+  "events": [
+    { "type": "register", "memberId": "u01", "handle": "priya_builds", "country": "India", "at": "2026-09-05T09:00:00Z" },
+    { "type": "register", "memberId": "u02", "handle": "marco.p", "country": "Italy", "at": "2026-09-05T11:00:00Z" },
+    { "type": "register", "memberId": "u03", "handle": "ada_dev", "country": "Nigeria", "at": "2026-09-06T08:30:00Z" },
+    { "type": "register", "memberId": "u04", "handle": "kenji.fm", "country": "Japan", "at": "2026-09-06T10:00:00Z" },
+    { "type": "register", "memberId": "u05", "handle": "sofia-codes", "country": "Brazil", "at": "2026-09-07T14:00:00Z" },
+    { "type": "register", "memberId": "u06", "handle": "tommy_w", "country": "USA", "at": "2026-09-08T09:00:00Z" },
+    { "type": "register", "memberId": "u07", "handle": "lena.ai", "country": "Germany", "at": "2026-09-08T10:00:00Z" },
+    { "type": "register", "memberId": "u08", "handle": "omar_builds", "country": "Egypt", "at": "2026-09-09T16:00:00Z" },
+    { "type": "register", "memberId": "u09", "handle": "grace_h", "country": "Canada", "at": "2026-09-10T09:00:00Z" },
+    { "type": "register", "memberId": "u10", "handle": "ravi_t", "country": "India", "at": "2026-09-10T12:00:00Z" },
+    { "type": "register", "memberId": "u11", "handle": "nina.exe", "country": "Poland", "at": "2026-09-11T08:00:00Z" },
+    { "type": "register", "memberId": "u12", "handle": "diego_ml", "country": "Mexico", "at": "2026-09-11T09:00:00Z" },
+
+    { "type": "join", "memberId": "u03", "at": "2026-09-06T09:00:00Z" },
+    { "type": "introduce", "memberId": "u03", "at": "2026-09-06T09:10:00Z", "text": "Hi, Ada from Nigeria, backend dev, first hackathon!" },
+    { "type": "message", "memberId": "u03", "at": "2026-09-07T10:00:00Z", "channel": "ai-builders-hackathon", "text": "anyone want to team up on a fintech idea?" },
+
+    { "type": "join", "memberId": "u04", "at": "2026-09-06T12:00:00Z" },
+    { "type": "introduce", "memberId": "u04", "at": "2026-09-06T12:05:00Z", "text": "Kenji from Japan, I do frontend and design" },
+    { "type": "message", "memberId": "u04", "at": "2026-09-07T09:00:00Z", "channel": "ai-builders-hackathon", "text": "looking for a teammate who knows RAG" },
+
+    { "type": "join", "memberId": "u06", "at": "2026-09-08T09:30:00Z" },
+    { "type": "introduce", "memberId": "u06", "at": "2026-09-08T09:40:00Z", "text": "Tommy from USA, fullstack, love dev tools" },
+    { "type": "message", "memberId": "u06", "at": "2026-09-12T20:00:00Z", "channel": "ai-builders-hackathon", "text": "almost done with our agent memory feature" },
+
+    { "type": "join", "memberId": "u07", "at": "2026-09-08T11:00:00Z" },
+    { "type": "introduce", "memberId": "u07", "at": "2026-09-08T11:10:00Z", "text": "Lena from Germany, ML engineer" },
+    { "type": "message", "memberId": "u07", "at": "2026-09-12T18:00:00Z", "channel": "ai-builders-hackathon", "text": "does the video have to be in english?" },
+
+    { "type": "join", "memberId": "u09", "at": "2026-09-10T10:00:00Z" },
+    { "type": "introduce", "memberId": "u09", "at": "2026-09-10T10:20:00Z", "text": "Grace from Canada, product designer learning to code" },
+    { "type": "message", "memberId": "u09", "at": "2026-09-12T21:00:00Z", "channel": "ai-builders-hackathon", "text": "our repo is finally public" },
+    { "type": "submit", "memberId": "u09", "at": "2026-09-12T22:00:00Z" },
+
+    { "type": "join", "memberId": "u10", "at": "2026-09-10T13:00:00Z" },
+    { "type": "introduce", "memberId": "u10", "at": "2026-09-10T13:15:00Z", "text": "Ravi from India, data science" },
+    { "type": "message", "memberId": "u10", "at": "2026-09-11T15:00:00Z", "channel": "ai-builders-hackathon", "text": "can I submit two projects?" },
+    { "type": "submit", "memberId": "u10", "at": "2026-09-12T10:00:00Z" },
+
+    { "type": "join", "memberId": "u11", "at": "2026-09-11T09:00:00Z" },
+    { "type": "introduce", "memberId": "u11", "at": "2026-09-11T09:10:00Z", "text": "Nina from Poland, security engineer" },
+    { "type": "message", "memberId": "u11", "at": "2026-09-11T10:00:00Z", "channel": "ai-builders-hackathon", "text": "is there a template for the docs?" },
+
+    { "type": "join", "memberId": "u12", "at": "2026-09-11T10:00:00Z" },
+    { "type": "introduce", "memberId": "u12", "at": "2026-09-11T10:05:00Z", "text": "Diego from Mexico, ML + mobile" },
+    { "type": "message", "memberId": "u12", "at": "2026-09-12T19:00:00Z", "channel": "ai-builders-hackathon", "text": "recording the demo video tonight" },
+
+    { "type": "join", "memberId": "u05", "at": "2026-09-08T15:00:00Z" },
+    { "type": "join", "memberId": "u08", "at": "2026-09-09T17:00:00Z" }
+  ]
+}

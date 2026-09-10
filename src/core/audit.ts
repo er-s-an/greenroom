@@ -6,7 +6,7 @@ export interface AuditEvent {
     | "contradiction.found"
     | "outreach.drafted"
     | "outreach.approved"
-    | "outcome.sent"
+    | "outreach.sent"
     | "outreach.rejected";
   summary: string;
   detail?: unknown;

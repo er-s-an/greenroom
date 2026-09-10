@@ -7,6 +7,7 @@
   "scripts": {
     "dev": "tsx src/server/index.ts",
     "sim": "tsx src/sim/cli.ts",
+    "sim:radar": "tsx src/sim/radar-cli.ts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

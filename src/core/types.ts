@@ -26,6 +26,13 @@ export interface AnswerDraft {
 
 export type Severity = "low" | "medium" | "high";
 
+/** Why a participant is stalled. Drives both radar display and outreach drafts. */
+export type StallKind =
+  | "registered-no-join"
+  | "joined-no-intro"
+  | "gone-quiet"
+  | "missing-submission";
+
 export interface ContradictionFinding {
   pair: [string, string];
   severity: Severity;
