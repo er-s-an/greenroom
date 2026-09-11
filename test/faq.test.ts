@@ -11,11 +11,18 @@ const registry = JSON.parse(readFileSync("data/corpus/contradictions.verified.js
 const llm = new MockLlm();
 
 describe("faq pipeline", () => {
-  it("answers an eligibility question with citations", async () => {
-    const result = await answerQuestion("Can startup founders join this hackathon?", corpus, llm);
-    expect(result.decision).toBe("answered");
-    expect(result.citations?.length).toBeGreaterThan(0);
-    expect(result.citations?.every((c) => c.url)).toBe(true);
+  it("fails closed on the founders question — it sits exactly on the verified conflict", async () => {
+    const findings = await scanCorpus(corpus, llm, registry);
+    const result = await answerQuestion("Can startup founders join this hackathon?", corpus, llm, {
+      conflicts: findings,
+    });
+    expect(result.decision).toBe("conflicted");
+    expect(result.answer).toBeUndefined();
+    expect(result.conflict?.sources.map((s) => s.docId)).toEqual([
+      "eligibility.rules_text",
+      "eligibility.structured",
+    ]);
+    expect(result.conflict?.routeTo).toMatch(/osconnect|forum/i);
   });
 
   it("answers the deadline question with the exact time", async () => {
@@ -38,14 +45,75 @@ describe("faq pipeline", () => {
     expect(result.citations?.some((c) => c.docId.startsWith("eligibility."))).toBe(true);
   });
 
-  it("fires an organizer alert when a question touches a known doc conflict", async () => {
-    // The demo money moment: participant asks about companies, copilot answers
-    // from the authoritative source AND flags the eligibility contradiction.
+  it("money moment: 'Can companies participate?' fails closed on the verified conflict", async () => {
+    // The demo money moment: no single-sided eligibility verdict leaves the
+    // building — the participant sees both official sources and the human route.
     const findings = await scanCorpus(corpus, llm, registry);
     const result = await answerQuestion("Can companies participate?", corpus, llm, { conflicts: findings });
+    expect(result.decision).toBe("conflicted");
+    expect(result.decision).not.toBe("answered");
+    expect(result.answer).toBeUndefined();
+    expect(result.conflict?.severity).toBe("high");
+    expect(result.conflict?.sources).toHaveLength(2);
+    expect(result.conflict?.sources[0]?.excerpt).toMatch(/Startup founders/);
+    expect(result.conflict?.sources[1]?.excerpt).toMatch(/Students only/);
+    expect(result.conflict?.routeTo).toMatch(/osconnect|forum/i);
+  });
+
+  it("does not over-block: geography questions still answer from the geo sentence", async () => {
+    // Brazil is excluded by a sentence OUTSIDE the verified conflict's anchors;
+    // the answer must ship normally.
+    const findings = await scanCorpus(corpus, llm, registry);
+    const result = await answerQuestion("I'm from Brazil — can I participate?", corpus, llm, {
+      conflicts: findings,
+    });
     expect(result.decision).toBe("answered");
-    expect(result.alerts?.[0]?.kind).toBe("doc-conflict");
-    expect(result.alerts?.[0]?.pair).toContain("eligibility.rules_text");
+    expect(result.answer).toMatch(/Brazil/);
+  });
+
+  it("never surfaces unverified detector candidates to participants", async () => {
+    const candidates = [
+      {
+        pair: ["dates.rules", "dates.announcement"] as [string, string],
+        severity: "medium" as const,
+        explanation: "unverified candidate",
+        verified: false,
+      },
+    ];
+    const result = await answerQuestion("when exactly is the submission deadline?", corpus, llm, {
+      conflicts: candidates,
+    });
+    expect(result.decision).toBe("answered");
+    expect(result.alerts ?? []).toHaveLength(0);
+    expect(result.conflict).toBeUndefined();
+  });
+
+  it("flags verified lower-severity conflicts as organizer alerts without blocking", async () => {
+    const verified = [
+      {
+        pair: ["dates.rules", "dates.announcement"] as [string, string],
+        severity: "medium" as const,
+        explanation: "human-checked wording difference",
+        verified: true,
+      },
+    ];
+    const result = await answerQuestion("when exactly is the submission deadline?", corpus, llm, {
+      conflicts: verified,
+    });
+    expect(result.decision).toBe("answered");
+    expect(result.alerts?.[0]?.verified).toBe(true);
+    expect(result.alerts?.[0]?.pair).toContain("dates.rules");
+  });
+
+  it("escalates when the LLM flips the source's negation, even after one repair", async () => {
+    const flipper = new MockLlm();
+    flipper.draftAnswer = async () => ({
+      text: "Companies are not excluded from participation.",
+      citations: [{ claim: "Companies are not excluded from participation.", docId: "eligibility.structured" }],
+    });
+    const result = await answerQuestion("Can companies participate?", corpus, flipper);
+    expect(result.decision).toBe("escalated");
+    expect(result.escalation?.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
   });
 
   it("repairs a gate-rejected draft once instead of escalating", async () => {

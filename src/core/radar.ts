@@ -34,17 +34,22 @@ export class Community {
   private members = new Map<string, Member>();
 
   ingest(event: RadarEvent): Member {
-    const m = this.members.get(event.memberId) ?? {
+    const existing = this.members.get(event.memberId);
+    const m = existing ?? {
       id: event.memberId,
       handle: "handle" in event ? event.handle : event.memberId,
       state: "registered" as MemberState,
       stateSince: event.at,
     };
     if (event.type === "register") {
+      // Registration facts always refresh, but the lifecycle never moves back:
+      // a duplicate/late register must not drag a submitted member to square one.
       m.handle = event.handle;
-      m.country = event.country;
-      m.state = "registered";
-      m.stateSince = event.at;
+      m.country = event.country ?? m.country;
+      if (!existing) {
+        m.state = "registered";
+        m.stateSince = event.at;
+      }
     } else if (event.type === "join" && rank(m.state) < rank("joined")) {
       m.state = "joined";
       m.stateSince = event.at;

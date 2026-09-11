@@ -50,4 +50,40 @@ describe("FileStore", () => {
     expect(store.loadAudit()).toEqual([]);
     expect(store.loadApprovals()).toEqual([]);
   });
+
+  it("restores a rejected draft as rejected after a restart", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "greenroom-reject-"));
+    const store = new FileStore(dir);
+    const queue = new ApprovalQueue({ send: () => {} });
+    const draft = queue.submit({ memberId: "u1", handle: "ada", kind: "gone-quiet", text: "hi" });
+    queue.reject(draft.id, "org", "too pushy");
+    store.saveApprovals(queue.all());
+
+    const restored = new ApprovalQueue({ send: () => {} }, new FileStore(dir).loadApprovals());
+    expect(restored.get(draft.id)?.status).toBe("rejected");
+    await expect(restored.approve(draft.id, "org")).rejects.toThrow(/rejected/);
+  });
+
+  it("restores a send_failed draft and lets retry finish the job", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "greenroom-retry-"));
+    const store = new FileStore(dir);
+    const queue = new ApprovalQueue({
+      send: () => {
+        throw new Error("discord 503");
+      },
+    });
+    const draft = queue.submit({ memberId: "u1", handle: "ada", kind: "gone-quiet", text: "hi" });
+    await queue.approve(draft.id, "org");
+    store.saveApprovals(queue.all());
+
+    const delivered: string[] = [];
+    const restored = new ApprovalQueue(
+      { send: (d) => void delivered.push(d.text) },
+      new FileStore(dir).loadApprovals(),
+    );
+    expect(restored.get(draft.id)?.status).toBe("send_failed");
+    await restored.retrySend(draft.id);
+    expect(restored.get(draft.id)?.status).toBe("sent");
+    expect(delivered).toEqual(["hi"]);
+  });
 });

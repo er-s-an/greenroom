@@ -1,0 +1,173 @@
+{
+  "suite": "greenroom-kimi-live-eval",
+  "at": "2026-09-11T14:04:38.692Z",
+  "provider": "kimi-for-coding",
+  "model": "kimi-for-coding",
+  "gitSha": "0b3ef7d",
+  "corpusHash": "46803dd9cd17b4ea",
+  "passed": 23,
+  "total": 23,
+  "cases": [
+    {
+      "q": "When is the submission deadline?",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "What are the judging criteria?",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "Do I have to join Discord?",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "hey so like when do i gotta turn in my project by",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "can a startup team join?? we're incorporated",
+      "expect": "conflicted",
+      "decision": "conflicted",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "im from brazil can i participate",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "how many prizes and what are they",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "what can I build, are agents allowed?",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "can i keep editing my project after i submit it",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "how does team registration work",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "what does NexFellow actually do",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "how much are the Tin credits and who gets them",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "where do I ask the organizers a question",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "what kind of projects are they looking for",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "is this online or in person",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "when will winners be announced",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "I want to apply to Algoverse, where's the form?",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "can I still apply for algoverse?",
+      "expect": "answered",
+      "decision": "answered",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "does the hackathon provide free GPT-6 API credits?",
+      "expect": "either",
+      "decision": "escalated",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "who won this hackathon last year?",
+      "expect": "escalated",
+      "decision": "escalated",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "is there a prize for best hardware hack?",
+      "expect": "escalated",
+      "decision": "escalated",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "what's the wifi password?",
+      "expect": "escalated",
+      "decision": "escalated",
+      "ok": true,
+      "problems": []
+    },
+    {
+      "q": "截止日期是哪天？",
+      "expect": "escalated",
+      "decision": "escalated",
+      "ok": true,
+      "problems": []
+    }
+  ]
+}

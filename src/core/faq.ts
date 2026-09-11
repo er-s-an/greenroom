@@ -1,6 +1,6 @@
 import type { ContradictionFinding, Corpus, CorpusDoc, Severity } from "./types.js";
 import { search } from "./retrieve.js";
-import { verifyDraft } from "./gate.js";
+import { containment, verifyDraft } from "./gate.js";
 import type { LlmProvider } from "./llm.js";
 import { byId } from "./corpus.js";
 
@@ -9,14 +9,38 @@ export interface OrganizerAlert {
   severity: Severity;
   pair: [string, string];
   explanation: string;
+  /** Alerts only ever fire for human-verified findings — see answerQuestion. */
+  verified: true;
+}
+
+export interface ConflictSource {
+  docId: string;
+  title: string;
+  url?: string;
+  /** The verbatim conflicting sentence(s) from this source. */
+  excerpt: string;
+}
+
+/**
+ * Fail-closed outcome: the question lands on a human-verified high-severity
+ * conflict between official sources, so no definitive answer is allowed out.
+ * The participant sees both conflicting sources verbatim plus the human route.
+ */
+export interface ConflictBlock {
+  severity: Severity;
+  pair: [string, string];
+  explanation: string;
+  sources: [ConflictSource, ConflictSource];
+  routeTo: string;
 }
 
 export interface FaqResult {
   question: string;
-  decision: "answered" | "escalated";
+  decision: "answered" | "escalated" | "conflicted";
   answer?: string;
   citations?: { claim: string; docId: string; url?: string }[];
-  /** Fired when a participant's question touches a known documentation conflict. */
+  conflict?: ConflictBlock;
+  /** Fired when an answered question touches a verified documentation conflict. */
   alerts?: OrganizerAlert[];
   escalation?: { reasons: string[]; routeTo: string };
   trace: {
@@ -41,6 +65,59 @@ function humanRoute(corpus: Corpus): string {
   return contact
     ? contact.body
     : "Route to a human organizer.";
+}
+
+/**
+ * How strongly a claim must overlap a verified conflict anchor to count as
+ * taking a position on the contested fact. Calibrated so a verbatim or close
+ * paraphrase of the conflicting sentence trips it (~1.0–0.67), while merely
+ * sharing common words with it ("open to participants from around the world"
+ * vs the founders list, 0.57) does not.
+ */
+const ANCHOR_OVERLAP = 0.6;
+
+function touchesAnchor(claim: string, anchor: string): boolean {
+  return containment(claim, anchor) >= ANCHOR_OVERLAP || containment(anchor, claim) >= ANCHOR_OVERLAP;
+}
+
+/**
+ * A verified high-severity conflict blocks a draft when the draft cites one of
+ * the paired docs AND takes a position on the contested sentence. A finding
+ * without anchors is treated conservatively: citing either doc is enough.
+ */
+function blockingConflict(
+  citations: { claim: string; docId: string }[],
+  conflicts: ContradictionFinding[],
+): ContradictionFinding | undefined {
+  for (const f of conflicts) {
+    if (!f.verified || f.severity !== "high") continue;
+    for (const c of citations) {
+      const idx = f.pair.indexOf(c.docId);
+      if (idx === -1) continue;
+      const anchor = f.anchors?.[idx];
+      if (!anchor || touchesAnchor(c.claim, anchor)) return f;
+    }
+  }
+  return undefined;
+}
+
+function conflictBlock(f: ContradictionFinding, corpus: Corpus): ConflictBlock {
+  const source = (docId: string, idx: 0 | 1): ConflictSource => {
+    const doc = byId(corpus, docId);
+    return {
+      docId,
+      title: doc?.title ?? docId,
+      url: doc?.source.url,
+      excerpt: f.anchors?.[idx] ?? doc?.body.split(/(?<=[.!?])\s+/)[0] ?? "",
+    };
+  };
+  return {
+    severity: f.severity,
+    pair: f.pair,
+    explanation: f.explanation,
+    sources: [source(f.pair[0], 0), source(f.pair[1], 1)],
+    routeTo: humanRoute(corpus),
+  };
 }
 
 export async function answerQuestion(
@@ -100,16 +177,31 @@ export async function answerQuestion(
     url: byId(corpus, c.docId)?.source.url,
   }));
 
-  // If the question touches a documentation conflict we already know about,
-  // the participant still gets their answer — and the organizer gets an alert.
+  // Fail closed: a verified high-severity conflict on the contested fact means
+  // no single-sided verdict leaves the building. The participant gets both
+  // official sources verbatim and the route to a human, not a coin flip.
+  const blocker = blockingConflict(citations, opts.conflicts ?? []);
+  if (blocker) {
+    return {
+      question,
+      decision: "conflicted",
+      conflict: conflictBlock(blocker, corpus),
+      trace: { ...trace, ...(repaired ? { repaired } : {}) },
+    };
+  }
+
+  // Verified lower-severity conflicts still let the answer through, flagged to
+  // the organizer. Unverified detector candidates NEVER surface to
+  // participants or become organizer alerts — they wait in the review queue.
   const citedIds = new Set(citations.map((c) => c.docId));
   const alerts: OrganizerAlert[] = (opts.conflicts ?? [])
-    .filter((f) => f.pair.some((id) => citedIds.has(id)))
+    .filter((f) => f.verified && f.pair.some((id) => citedIds.has(id)))
     .map((f) => ({
       kind: "doc-conflict" as const,
       severity: f.severity,
       pair: f.pair,
       explanation: f.explanation,
+      verified: true as const,
     }));
 
   return {

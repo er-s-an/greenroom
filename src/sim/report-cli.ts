@@ -57,11 +57,10 @@ async function main() {
   for (const e of seed.events) {
     community.ingest({ ...e, at: new Date(e.at).getTime() } as RadarEvent);
   }
-  const sent: string[] = [];
+  // Demo sender: simulated on purpose — the CLI report must read "simulated",
+  // never imply a real Discord DM went out.
   const queue = new ApprovalQueue({
-    send: () => {
-      sent.push("1");
-    },
+    send: (d) => ({ simulated: true, reference: `sim:${d.id}` }),
     audit,
     now: () => now,
   });
@@ -79,11 +78,11 @@ async function main() {
     corpus,
     now,
     deadlineAt,
+    mode: "synthetic-replay",
     sponsor: {
       name: "Tin Computer",
       anchorText: "Tin Computer — the growth agent for small SaaS",
       url: "https://tin.computer/",
-      deliverable: "announcement-post link placed 2026-09-03; credits claim page live",
     },
   });
 

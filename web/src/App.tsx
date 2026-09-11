@@ -3,12 +3,14 @@ import { MotionConfig, motion } from "motion/react";
 import {
   api,
   type AuditEvent,
+  type ContradictionFinding,
   type OutreachDraft,
   type RadarFlag,
   type StateResponse,
 } from "./api";
 import { TopBar } from "./components/TopBar";
 import { AskPanel } from "./components/AskPanel";
+import { FindingsPanel } from "./components/FindingsPanel";
 import { RadarPanel } from "./components/RadarPanel";
 import { ApprovalsPanel } from "./components/ApprovalsPanel";
 import { AuditPanel } from "./components/AuditPanel";
@@ -20,20 +22,23 @@ export default function App() {
   const [flags, setFlags] = useState<RadarFlag[]>([]);
   const [drafts, setDrafts] = useState<OutreachDraft[]>([]);
   const [audit, setAudit] = useState<AuditEvent[]>([]);
+  const [findings, setFindings] = useState<ContradictionFinding[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
-      const [s, f, d, a] = await Promise.all([
+      const [s, f, d, a, c] = await Promise.all([
         api.state(),
         api.radar(),
         api.approvals(),
         api.audit(),
+        api.contradictions(),
       ]);
       setState(s);
       setFlags(f);
       setDrafts(d);
       setAudit(a);
+      setFindings(c);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -67,12 +72,19 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...panelSpring, delay: 0.08 }}
             >
-              <RadarPanel flags={flags} onDrafted={refresh} />
+              <FindingsPanel findings={findings} />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...panelSpring, delay: 0.16 }}
+            >
+              <RadarPanel flags={flags} onDrafted={refresh} />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...panelSpring, delay: 0.24 }}
             >
               <ApprovalsPanel drafts={drafts} onAction={refresh} />
             </motion.div>
@@ -81,7 +93,7 @@ export default function App() {
             style={{ gridColumn: "1 / -1" }}
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ ...panelSpring, delay: 0.24 }}
+            transition={{ ...panelSpring, delay: 0.32 }}
           >
             <AuditPanel audit={audit} />
           </motion.div>

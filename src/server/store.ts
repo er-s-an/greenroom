@@ -1,4 +1,4 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { RadarEvent } from "../core/radar.js";
 import type { AuditEvent } from "../core/audit.js";
@@ -46,7 +46,10 @@ export class FileStore {
   }
 
   saveApprovals(drafts: OutreachDraft[]): void {
-    writeFileSync(this.path("approvals.json"), JSON.stringify(drafts, null, 2));
+    // atomic: tmp + rename, so a crash mid-write never leaves a torn snapshot
+    const p = this.path("approvals.json");
+    writeFileSync(p + ".tmp", JSON.stringify(drafts, null, 2));
+    renameSync(p + ".tmp", p);
   }
 
   loadApprovals(): OutreachDraft[] {

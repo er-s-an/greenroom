@@ -3,10 +3,13 @@ export interface AuditEvent {
   kind:
     | "faq.answered"
     | "faq.escalated"
+    | "faq.conflicted"
     | "contradiction.found"
     | "outreach.drafted"
     | "outreach.approved"
     | "outreach.sent"
+    | "outreach.simulated"
+    | "outreach.send_failed"
     | "outreach.rejected";
   summary: string;
   detail?: unknown;

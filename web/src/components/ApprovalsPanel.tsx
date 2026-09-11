@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Check, X } from "@phosphor-icons/react";
+import { ArrowCounterClockwise, Check, X } from "@phosphor-icons/react";
 import { api, type OutreachDraft } from "../api";
 import { KIND_LABEL } from "./RadarPanel";
 
@@ -8,6 +8,24 @@ const spring = { type: "spring" as const, stiffness: 170, damping: 22 };
 
 function fmtDate(ms: number): string {
   return new Date(ms).toISOString().replace("T", " ").slice(0, 16) + "Z";
+}
+
+/** Honest wording per status — "sent" is reserved for a real sender receipt. */
+function statusLine(d: OutreachDraft): string {
+  switch (d.status) {
+    case "simulated":
+      return `simulated by ${d.decidedBy} · demo sender — no Discord DM left this machine`;
+    case "sent":
+      return `sent by ${d.decidedBy}${d.reference ? ` · receipt ${d.reference}` : ""}`;
+    case "send_failed":
+      return `approved by ${d.decidedBy} · send failed: ${d.lastError ?? "unknown error"}`;
+    case "rejected":
+      return `rejected by ${d.decidedBy}`;
+    case "approved":
+      return `approved by ${d.decidedBy} · sending…`;
+    default:
+      return "";
+  }
 }
 
 export function ApprovalsPanel({
@@ -48,7 +66,7 @@ export function ApprovalsPanel({
                 <div className="draft-head">
                   <span className="mono">@{d.handle}</span>
                   <span className={`chip kind-${d.kind}`}>{KIND_LABEL[d.kind]}</span>
-                  <span className={`badge badge-${d.status}`}>{d.status}</span>
+                  <span className={`badge badge-${d.status}`}>{d.status.replace("_", " ")}</span>
                 </div>
                 <p className="draft-text">{d.text}</p>
                 {d.status === "pending" && (
@@ -73,10 +91,23 @@ export function ApprovalsPanel({
                     </motion.button>
                   </div>
                 )}
+                {(d.status === "send_failed" || d.status === "approved") && (
+                  <div className="draft-actions">
+                    <motion.button
+                      className="btn btn-small"
+                      disabled={busy}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => act(api.retry(d.id))}
+                    >
+                      <ArrowCounterClockwise size={13} weight="bold" />
+                      Retry send
+                    </motion.button>
+                  </div>
+                )}
                 {d.decidedBy && (
                   <p className="muted draft-meta">
-                    {d.status} by {d.decidedBy}
-                    {d.sentAt ? ` · sent ${fmtDate(d.sentAt)}` : ""}
+                    {statusLine(d)}
+                    {d.sentAt ? ` · ${fmtDate(d.sentAt)}` : ""}
                   </p>
                 )}
               </motion.div>

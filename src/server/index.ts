@@ -32,14 +32,24 @@ interface VerifiedRegistry {
   findings: { pair: [string, string]; severity: "low" | "medium" | "high"; explanation: string }[];
 }
 
+/**
+ * Demo mode is explicit: without GREENROOM_MODE=live the server replays the
+ * synthetic 12-member seed at the seed's fixed clock, and every API response
+ * is labeled `synthetic-replay`. In live mode the wall clock is used and the
+ * deadline comes from GREENROOM_DEADLINE (falling back to the seed value).
+ */
+const LIVE = process.env.GREENROOM_MODE === "live";
+
 const corpus = loadCorpus(join(rootDir, "data/corpus/ai-builders-hackathon-2026.json"));
 const registry = JSON.parse(
   readFileSync(join(rootDir, "data/corpus/contradictions.verified.json"), "utf8"),
 ) as VerifiedRegistry;
 const seed = JSON.parse(readFileSync(join(rootDir, "data/seed/community.json"), "utf8")) as SeedFile;
 
-const now = new Date(seed.now).getTime();
-const deadlineAt = new Date(seed.deadline).getTime();
+const now = LIVE ? Date.now() : new Date(seed.now).getTime();
+const deadlineAt = process.env.GREENROOM_DEADLINE
+  ? new Date(process.env.GREENROOM_DEADLINE).getTime()
+  : new Date(seed.deadline).getTime();
 
 const llm: LlmProvider =
   process.env.LLM === "kimi" && process.env.KIMI_CODE_API_KEY ? new KimiLlm() : new MockLlm();
@@ -59,12 +69,11 @@ const audit = new AuditLog((e) => store.appendAudit(e));
 audit.restore(store.loadAudit());
 const hasRecordedFindings = audit.list().some((e) => e.kind === "contradiction.found");
 
-const sent: OutreachDraft[] = [];
+// Demo sender: records a receipt but delivers nothing. The `simulated` status
+// is deliberate — the UI and audit trail must never imply a real Discord DM.
 const queue = new ApprovalQueue(
   {
-    send: (draft) => {
-      sent.push(draft);
-    },
+    send: (draft) => ({ simulated: true, reference: `sim:${draft.id}@${new Date(now).toISOString()}` }),
     audit,
     now: () => now,
   },
@@ -82,6 +91,8 @@ app.get("/api/state", async () => ({
   event: corpus.event,
   members: community.list(),
   provider: llm.name,
+  mode: LIVE ? ("live" as const) : ("synthetic-replay" as const),
+  synthetic: !LIVE,
 }));
 
 app.get("/api/radar", async () => scan(community, { now, deadlineAt }));
@@ -92,7 +103,9 @@ app.post("/api/radar/draft", async () => {
   const fresh = flags.filter(
     (f) =>
       !existing.some(
-        (d) => d.memberId === f.memberId && (d.status === "pending" || d.status === "sent"),
+        (d) =>
+          d.memberId === f.memberId &&
+          ["pending", "approved", "send_failed", "simulated", "sent"].includes(d.status),
       ),
   );
   const ids = await draftOutreachForFlags(fresh, llm, queue, audit);
@@ -112,7 +125,9 @@ app.post("/api/approvals/:id/approve", async (req, reply) => {
   const { id } = req.params as { id: string };
   const body = (req.body ?? {}) as { by?: string };
   try {
-    return await queue.approve(id, body.by ?? "organizer-demo");
+    const draft = await queue.approve(id, body.by ?? "organizer-demo");
+    persistDrafts();
+    return draft;
   } catch (err) {
     return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -122,7 +137,20 @@ app.post("/api/approvals/:id/reject", async (req, reply) => {
   const { id } = req.params as { id: string };
   const body = (req.body ?? {}) as { by?: string; reason?: string };
   try {
-    return queue.reject(id, body.by ?? "organizer-demo", body.reason);
+    const draft = queue.reject(id, body.by ?? "organizer-demo", body.reason);
+    persistDrafts();
+    return draft;
+  } catch (err) {
+    return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
+  }
+});
+
+app.post("/api/approvals/:id/retry", async (req, reply) => {
+  const { id } = req.params as { id: string };
+  try {
+    const draft = await queue.retrySend(id);
+    persistDrafts();
+    return draft;
   } catch (err) {
     return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
   }
@@ -130,7 +158,16 @@ app.post("/api/approvals/:id/reject", async (req, reply) => {
 
 app.get("/api/audit", async () => [...audit.list()].reverse());
 
-app.get("/api/sent", async () => sent);
+/** Outbound history — straight from the queue, so status semantics stay honest. */
+app.get("/api/outbound", async () =>
+  queue.all().filter((d) => d.status === "sent" || d.status === "simulated" || d.status === "send_failed"),
+);
+
+/**
+ * The contradiction review queue. Verified findings and unverified detector
+ * candidates are both listed — clearly labeled, never merged into one fact.
+ */
+app.get("/api/contradictions", async () => findings);
 
 app.get("/api/report", async () => ({
   markdown: generateReport({
@@ -139,11 +176,16 @@ app.get("/api/report", async () => ({
     corpus,
     now,
     deadlineAt,
+    mode: LIVE ? "live" : "synthetic-replay",
     sponsor: {
       name: "Tin Computer",
       anchorText: "Tin Computer — the growth agent for small SaaS",
       url: "https://tin.computer/",
-      deliverable: "announcement-post link placed 2026-09-03; credits claim page live",
+      // No delivery claim here: a deliverable only appears when an organizer
+      // configures one via GREENROOM_SPONSOR_DELIVERABLE after really doing it.
+      ...(process.env.GREENROOM_SPONSOR_DELIVERABLE
+        ? { deliverable: process.env.GREENROOM_SPONSOR_DELIVERABLE }
+        : {}),
     },
   }),
 }));
@@ -156,8 +198,15 @@ app.post("/api/ask", async (req, reply) => {
   const result: FaqResult = await answerQuestion(body.question, corpus, llm, {
     conflicts: findings,
   });
-  audit.record(result.decision === "answered" ? "faq.answered" : "faq.escalated", result.question, {
+  const kind =
+    result.decision === "answered"
+      ? ("faq.answered" as const)
+      : result.decision === "conflicted"
+        ? ("faq.conflicted" as const)
+        : ("faq.escalated" as const);
+  audit.record(kind, result.question, {
     citations: result.citations?.map((c) => c.docId),
+    conflict: result.conflict?.pair,
     alerts: result.alerts?.length ?? 0,
     reasons: result.escalation?.reasons,
   });
@@ -179,11 +228,19 @@ async function main() {
   findings = await scanCorpus(corpus, llm, registry);
   if (!hasRecordedFindings) {
     for (const f of findings) {
-      audit.record("contradiction.found", `${f.pair.join(" × ")} (${f.severity})`, f);
+      // Candidates are recorded as candidates — the audit trail keeps the
+      // verified/unverified distinction instead of merging them into one fact.
+      audit.record(
+        "contradiction.found",
+        `${f.verified ? "verified" : "candidate"}: ${f.pair.join(" × ")} (${f.severity})`,
+        f,
+      );
     }
   }
   await app.listen({ port, host: "127.0.0.1" });
-  console.log(`greenroom server listening on http://localhost:${port} (llm: ${llm.name})`);
+  console.log(
+    `greenroom server listening on http://localhost:${port} (llm: ${llm.name}, mode: ${LIVE ? "live" : "synthetic-replay"})`,
+  );
 }
 
 await main();

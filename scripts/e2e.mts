@@ -1,24 +1,49 @@
 /**
  * UI smoke test: boots the real server (mock LLM, throwaway data dir) and
- * drives the dashboard with a real browser. Run: pnpm tsx scripts/e2e.mts
+ * drives the dashboard with a real browser. Run: pnpm e2e
+ *
+ * Playwright is NOT a bundled dependency (heavy). Resolution order:
+ *   1. local node_modules (pnpm add -D playwright)
+ *   2. PLAYWRIGHT_REQUIRE_ROOT env var (a path createRequire can start from)
+ *   3. the global npm root (`npm root -g`)
+ * Writes a machine-readable artifact to e2e-results/.
  */
-import { spawn, type ChildProcess } from "node:child_process";
-import { mkdtempSync } from "node:fs";
+import { spawn, execSync, type ChildProcess } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 
-const require = createRequire("/Users/xiejiachen/nodejs/lib/node_modules/");
-const { chromium } = require("playwright");
+function loadPlaywright(): { chromium: any } {
+  const roots = [import.meta.url];
+  if (process.env.PLAYWRIGHT_REQUIRE_ROOT) roots.push(process.env.PLAYWRIGHT_REQUIRE_ROOT);
+  try {
+    roots.push(`file://${execSync("npm root -g").toString().trim()}/`);
+  } catch {
+    // no global npm root — fall through to the error below
+  }
+  for (const root of roots) {
+    try {
+      return createRequire(root)("playwright");
+    } catch {
+      // try next root
+    }
+  }
+  throw new Error(
+    "playwright not found. Install it locally (pnpm add -D playwright) or set PLAYWRIGHT_REQUIRE_ROOT.",
+  );
+}
+const { chromium } = loadPlaywright();
 
 const PORT = 3457;
 const BASE = `http://localhost:${PORT}`;
 let server: ChildProcess | undefined;
-const failures: string[] = [];
+const results: { name: string; ok: boolean }[] = [];
 
 function check(name: string, ok: boolean) {
   console.log(`${ok ? "✓" : "✗"} ${name}`);
-  if (!ok) failures.push(name);
+  results.push({ name, ok });
 }
 
 async function waitForServer(timeoutMs = 15000): Promise<void> {
@@ -31,6 +56,21 @@ async function waitForServer(timeoutMs = 15000): Promise<void> {
     await new Promise((r) => setTimeout(r, 400));
   }
   throw new Error("server did not come up");
+}
+
+function gitSha(): string {
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+function corpusHash(): string {
+  const h = createHash("sha256");
+  h.update(readFileSync("data/corpus/ai-builders-hackathon-2026.json"));
+  h.update(readFileSync("data/corpus/contradictions.verified.json"));
+  return h.digest("hex").slice(0, 16);
 }
 
 async function main() {
@@ -47,17 +87,28 @@ async function main() {
   await page.waitForTimeout(1200);
 
   check("dashboard loads with funnel", await page.getByText("Stall radar").first().isVisible());
+  check("synthetic replay chip is visible", await page.getByText(/synthetic replay/i).first().isVisible());
+  check(
+    "verified conflict listed in Doc conflicts panel",
+    await page.getByText(/eligibility\.rules_text × eligibility\.structured/).first().isVisible(),
+  );
 
-  // money moment
+  // money moment: fail-closed on the verified eligibility conflict
   await page.getByText("Can companies participate?").first().click();
   await page.waitForTimeout(2500);
   check(
-    "cited answer rendered",
-    await page.getByText(/Companies\/professional organizations excluded/).first().isVisible(),
+    "fail-closed card appears (no one-sided verdict)",
+    await page.getByText(/Official sources conflict/i).first().isVisible(),
   );
   check(
-    "doc-conflict organizer alert banner",
-    await page.getByText(/documentation conflict/i).first().isVisible(),
+    "both conflicting excerpts shown verbatim",
+    (await page.getByText(/Companies\/professional organizations excluded/).count()) > 0 &&
+      (await page.getByText(/Startup founders and entrepreneurs/).count()) > 0,
+  );
+  check(
+    "conflict marked human-verified with a human route",
+    (await page.getByText(/verified by a human/i).count()) > 0 &&
+      (await page.getByText(/routes this to a human/i).count()) > 0,
   );
 
   // escalation path
@@ -66,22 +117,27 @@ async function main() {
   await page.waitForTimeout(2500);
   check("off-topic escalates visibly", (await page.getByText(/escalat/i).count()) > 0);
 
-  // radar → drafts → approve
+  // radar → drafts → approve → simulated (never "sent" without a real sender)
   await page.getByText(/draft outreach/i).first().click();
   await page.waitForTimeout(2500);
   const approveBtn = page.getByRole("button", { name: /approve/i }).first();
   check("draft cards appear in approval queue", await approveBtn.isVisible());
   await approveBtn.click();
   await page.waitForTimeout(1500);
-  check("approved draft shows as sent", (await page.getByText(/^sent$/i).count()) > 0);
+  check("approved draft is labeled simulated, not sent", (await page.getByText(/^simulated$/i).count()) > 0);
+  check("no draft claims to be really sent", (await page.getByText(/^sent$/i).count()) === 0);
 
   // audit trail grew
-  check("audit trail records events", (await page.getByText(/outreach\.(drafted|approved|sent)/).count()) >= 3);
+  check(
+    "audit trail records events incl. simulation honesty",
+    (await page.getByText(/outreach\.(drafted|approved|simulated)/).count()) >= 3,
+  );
 
-  // sponsor report renders
+  // sponsor report renders with the synthetic-replay disclaimer
   await page.getByText(/sponsor report/i).first().click();
   await page.waitForTimeout(1500);
   check("sponsor report renders", await page.getByText(/Engagement Report/).first().isVisible());
+  check("report carries the synthetic-replay disclaimer", (await page.getByText(/Synthetic replay/i).count()) > 0);
 
   await browser.close();
 }
@@ -91,5 +147,21 @@ try {
 } finally {
   server?.kill();
 }
-console.log(failures.length === 0 ? "\nE2E: ALL PASS" : `\nE2E FAILURES: ${failures.join("; ")}`);
-process.exit(failures.length === 0 ? 0 : 1);
+
+const failed = results.filter((r) => !r.ok);
+const artifact = {
+  suite: "greenroom-ui-e2e",
+  at: new Date().toISOString(),
+  gitSha: gitSha(),
+  corpusHash: corpusHash(),
+  passed: results.length - failed.length,
+  total: results.length,
+  results,
+};
+mkdirSync("e2e-results", { recursive: true });
+const file = `e2e-results/e2e-${artifact.at.replace(/[:.]/g, "-")}.json`;
+writeFileSync(file, JSON.stringify(artifact, null, 2));
+writeFileSync("e2e-results/latest.json", JSON.stringify(artifact, null, 2));
+console.log(`\nartifact → ${file}`);
+console.log(failed.length === 0 ? "E2E: ALL PASS" : `E2E FAILURES: ${failed.map((f) => f.name).join("; ")}`);
+process.exit(failed.length === 0 ? 0 : 1);

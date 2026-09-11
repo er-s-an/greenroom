@@ -3,16 +3,37 @@
  * Not part of vitest — hits the network and costs quota.
  * Run: pnpm tsx scripts/eval-live.mts
  */
-import { readFileSync } from "node:fs";
+import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { loadCorpus } from "../src/core/corpus.js";
 import { answerQuestion } from "../src/core/faq.js";
 import { KimiLlm } from "../src/core/llm.js";
 import { scanCorpus } from "../src/core/contradictions.js";
 
+function gitSha(): string {
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "unknown";
+  }
+}
+
+function corpusHash(): string {
+  const h = createHash("sha256");
+  h.update(readFileSync("data/corpus/ai-builders-hackathon-2026.json"));
+  h.update(readFileSync("data/corpus/contradictions.verified.json"));
+  return h.digest("hex").slice(0, 16);
+}
+
 interface Case {
   q: string;
-  /** "either" = escalation or an honest grounded answer are both acceptable. */
-  expect: "answered" | "escalated" | "either";
+  /**
+   * "either" = escalation or an honest grounded answer are both acceptable.
+   * "conflicted" = the question sits on a verified high-severity doc conflict;
+   * the copilot must fail closed (both sources + human route, no verdict).
+   */
+  expect: "answered" | "escalated" | "either" | "conflicted";
   note?: string;
   expectCite?: string; // docId prefix — when answered, must cite this doc
   expectAlert?: boolean;
@@ -29,7 +50,11 @@ const CASES: Case[] = [
   { q: "Do I have to join Discord?", expect: "answered", expectCite: "participation.discord" },
   // paraphrased / messy
   { q: "hey so like when do i gotta turn in my project by", expect: "answered", expectCite: "dates." },
-  { q: "can a startup team join?? we're incorporated", expect: "answered", expectAlert: true },
+  {
+    q: "can a startup team join?? we're incorporated",
+    expect: "conflicted",
+    note: "sits exactly on the verified students-only/companies-excluded conflict",
+  },
   { q: "im from brazil can i participate", expect: "answered", expectCite: "eligibility." },
   { q: "how many prizes and what are they", expect: "answered", expectCite: "prize." },
   { q: "what can I build, are agents allowed?", expect: "answered", expectCite: "submission.categories" },
@@ -69,6 +94,7 @@ async function main() {
   let pass = 0;
   const failures: string[] = [];
   const overEscalations: string[] = [];
+  const caseResults: { q: string; expect: string; decision: string; ok: boolean; problems: string[] }[] = [];
 
   for (const c of CASES) {
     const r = await answerQuestion(c.q, corpus, llm, { conflicts: findings });
@@ -84,6 +110,14 @@ async function main() {
         if (c.mustNot?.test(r.answer ?? "")) problems.push("AFFIRMS the fabricated fact");
       }
       // escalation is always acceptable for "either"
+    } else if (c.expect === "conflicted") {
+      if (r.decision !== "conflicted") {
+        problems.push(`decision=${r.decision}, expected conflicted (fail-closed)`);
+      } else {
+        if (r.answer) problems.push("shipped a definitive answer despite the verified conflict");
+        if ((r.conflict?.sources.length ?? 0) !== 2) problems.push("did not show both conflicting sources");
+        if (!r.conflict?.routeTo) problems.push("no human route given");
+      }
     } else if (r.decision !== c.expect) {
       problems.push(`decision=${r.decision}, expected ${c.expect}`);
     }
@@ -100,6 +134,7 @@ async function main() {
     const ok = problems.length === 0;
     if (ok) pass++;
     else failures.push(`✗ "${c.q}" → ${problems.join(" | ")}`);
+    caseResults.push({ q: c.q, expect: c.expect, decision: r.decision, ok, problems });
     console.log(`${ok ? "✓" : "✗"} [${r.decision}] ${c.q}${problems.length ? "  → " + problems.join(" | ") : ""}`);
   }
 
@@ -108,6 +143,25 @@ async function main() {
     console.log(`\nover-escalations (gate too strict for real LLM output):`);
     for (const e of overEscalations) console.log(`  ${e}`);
   }
+
+  // Machine-readable evidence: provider, model, timing, git SHA, corpus hash.
+  const artifact = {
+    suite: "greenroom-kimi-live-eval",
+    at: new Date().toISOString(),
+    provider: llm.name,
+    model: "kimi-for-coding",
+    gitSha: gitSha(),
+    corpusHash: corpusHash(),
+    passed: pass,
+    total: CASES.length,
+    cases: caseResults,
+  };
+  mkdirSync("eval-results", { recursive: true });
+  const file = `eval-results/eval-${artifact.at.replace(/[:.]/g, "-")}.json`;
+  writeFileSync(file, JSON.stringify(artifact, null, 2));
+  writeFileSync("eval-results/latest.json", JSON.stringify(artifact, null, 2));
+  console.log(`artifact → ${file}`);
+
   if (failures.length) process.exitCode = 1;
 }
 

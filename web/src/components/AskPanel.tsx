@@ -1,7 +1,14 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { LinkSimpleHorizontal, MagnifyingGlass, Scroll, ShieldCheck, WarningDiamond } from "@phosphor-icons/react";
-import { api, type FaqResult } from "../api";
+import {
+  LinkSimpleHorizontal,
+  MagnifyingGlass,
+  Scroll,
+  ShieldCheck,
+  ArrowsLeftRight,
+  WarningDiamond,
+} from "@phosphor-icons/react";
+import { api, type ConflictBlock, type FaqResult } from "../api";
 
 const EXAMPLE_QUESTIONS = [
   "Can companies participate?",
@@ -154,7 +161,9 @@ export function AskPanel() {
                   ))}
                 </motion.div>
               )}
-              {result.decision === "answered" ? (
+              {result.decision === "conflicted" && result.conflict ? (
+                <ConflictCard conflict={result.conflict} />
+              ) : result.decision === "answered" ? (
                 <>
                   <p className="answer">{result.answer}</p>
                   {result.citations && result.citations.length > 0 && (
@@ -209,5 +218,58 @@ function PulseIcon({ severity }: { severity?: string }) {
     >
       <WarningDiamond size={16} weight="fill" color={high ? "#c4634f" : "#d4a24e"} />
     </motion.span>
+  );
+}
+
+/**
+ * Fail-closed card: official sources contradict each other on the very fact
+ * asked about, so Greenroom refuses to pick a side. Both sources are shown
+ * verbatim, the conflict is marked human-verified, and the participant gets
+ * the human route instead of a coin-flip answer.
+ */
+function ConflictCard({ conflict }: { conflict: ConflictBlock }) {
+  return (
+    <motion.div
+      className="conflict-card"
+      initial={{ opacity: 0, scale: 0.985 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={spring}
+    >
+      <div className="conflict-head">
+        <PulseIcon severity={conflict.severity} />
+        <div>
+          <h3>Official sources conflict — no definitive answer</h3>
+          <span className="chip chip-verified">verified by a human organizer</span>
+        </div>
+      </div>
+      <div className="conflict-vs">
+        {conflict.sources.map((s, i) => (
+          <motion.blockquote
+            key={s.docId}
+            className="conflict-source"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...spring, delay: 0.12 + i * 0.09 }}
+          >
+            <p>“{s.excerpt}”</p>
+            <footer>
+              <span className="mono doc-id">{s.docId}</span>
+              {s.url && (
+                <a href={s.url} target="_blank" rel="noreferrer">
+                  source
+                </a>
+              )}
+            </footer>
+          </motion.blockquote>
+        ))}
+        <span className="conflict-divider" aria-hidden>
+          <ArrowsLeftRight size={15} weight="bold" />
+        </span>
+      </div>
+      <p className="conflict-explanation">{conflict.explanation}</p>
+      <p className="conflict-route">
+        Rather than guessing, Greenroom routes this to a human: {conflict.routeTo}
+      </p>
+    </motion.div>
   );
 }

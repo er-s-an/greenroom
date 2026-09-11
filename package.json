@@ -7,12 +7,20 @@
   "scripts": {
     "dev": "tsx src/server/index.ts",
     "dev:web": "vite dev web",
+    "build": "vite build web",
     "build:web": "vite build web",
+    "start": "tsx src/server/index.ts",
     "sim": "tsx src/sim/cli.ts",
     "sim:radar": "tsx src/sim/radar-cli.ts",
     "sim:report": "tsx src/sim/report-cli.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit && tsc -p web/tsconfig.json --noEmit"
+    "typecheck": "tsc --noEmit && tsc -p web/tsconfig.json --noEmit",
+    "e2e": "tsx scripts/e2e.mts",
+    "eval:live": "tsx scripts/eval-live.mts"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

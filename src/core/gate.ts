@@ -23,11 +23,107 @@ function normalize(text: string): string {
   return text.replace(/\s+/g, " ").trim();
 }
 
+// --- polarity, quantifier & number guard ------------------------------------
+// Containment is lexical: it cannot see that "Companies are NOT excluded"
+// flips the meaning of "Companies excluded" ("not" is even a stopword). This
+// guard extracts polarity cues (negators, exclusion words, double negation),
+// modal/limit cues (must/may/only) and numbers from a claim and from its
+// best-matching source sentence, and refuses the draft when they disagree.
+
+const NEGATORS = new Set(["not", "no", "never", "without", "cannot", "none", "neither", "nor"]);
+const EXCLUDERS = new Set([
+  "exclude", "excluded", "excludes", "excluding", "except", "excepted",
+  "ineligible", "prohibited", "forbidden", "banned", "denied", "disqualified",
+]);
+const MUSTS = new Set(["must", "required", "requires", "require", "shall", "mandatory"]);
+const MAYS = new Set(["may", "might", "optional", "optionally", "allowed", "permitted"]);
+
+interface Cues {
+  neg: string[];
+  modal: string[];
+  nums: string[];
+}
+
+function cueSignature(text: string): Cues {
+  const words = text.toLowerCase().split(/[^a-z0-9']+/).filter(Boolean);
+  const neg: string[] = [];
+  const consumed = new Set<number>();
+  for (let i = 0; i < words.length; i++) {
+    const w = words[i]!;
+    if (NEGATORS.has(w) || w.endsWith("n't")) {
+      // Double negation: "not excluded" / "never prohibited" asserts inclusion.
+      const ahead = [words[i + 1], words[i + 2]];
+      const flipOffset = ahead.findIndex((x) => x !== undefined && EXCLUDERS.has(x));
+      if (flipOffset >= 0) {
+        consumed.add(i + 1 + flipOffset);
+        neg.push("ALLOW");
+      } else {
+        neg.push("NEG");
+      }
+    } else if (!consumed.has(i) && EXCLUDERS.has(w)) {
+      neg.push("NEG"); // exclusion words carry negative polarity on their own
+    }
+  }
+  const modal: string[] = [];
+  for (const w of words) {
+    if (MUSTS.has(w)) modal.push("MUST");
+    else if (MAYS.has(w)) modal.push("MAY");
+    else if (w === "only") modal.push("ONLY");
+  }
+  const nums = (text.match(/\d[\d,]*(?:\.\d+)?/g) ?? []).map((n) => n.replace(/,/g, ""));
+  return { neg: neg.sort(), modal: modal.sort(), nums: nums.sort() };
+}
+
+/** A claim paraphrases one source sentence when this much of it is covered there. */
+const ANCHOR_SCORE = 0.75;
+
+function polarityProblems(claim: string, doc: CorpusDoc): string[] {
+  const problems: string[] = [];
+  const claimCues = cueSignature(claim);
+
+  // Fabricated numbers/dates are never acceptable, wherever they came from.
+  const docNums = new Set(cueSignature(doc.body).nums);
+  for (const n of claimCues.nums) {
+    if (!docNums.has(n)) {
+      problems.push(`number '${n}' does not appear in source '${doc.id}'`);
+    }
+  }
+
+  const sentences = splitSentences(doc.body);
+  let best: { s: string; score: number } = { s: "", score: 0 };
+  for (const s of sentences) {
+    const score = containment(claim, s);
+    if (score > best.score) best = { s, score };
+  }
+  // Below the anchor threshold the claim spans several source sentences;
+  // whole-doc containment already gates that case.
+  if (best.score >= ANCHOR_SCORE) {
+    const src = cueSignature(best.s);
+    if (claimCues.neg.join("|") !== src.neg.join("|")) {
+      problems.push(
+        `negation/exclusion differs from source sentence '${best.s.slice(0, 70)}…' (claim flips or drops it)`,
+      );
+    }
+    if (claimCues.modal.join("|") !== src.modal.join("|")) {
+      problems.push(
+        `modal/quantifier (must/may/only) differs from source sentence '${best.s.slice(0, 70)}…'`,
+      );
+    }
+    const dropped = src.nums.filter((n) => !claimCues.nums.includes(n));
+    if (dropped.length > 0) {
+      problems.push(`claim drops number(s) ${dropped.join(", ")} from its source sentence`);
+    }
+  }
+  return problems;
+}
+
 /**
  * The citation gate. Deterministic. The LLM may word an answer, but every
  * sentence must be covered by a citation to a retrieved document, every
- * citation must anchor to the answer text, and every claim must stay inside
- * its source's vocabulary. Anything else never reaches a participant.
+ * citation must anchor to the answer text, every claim must stay inside its
+ * source's vocabulary, and a claim may not flip or drop the source's negation,
+ * exclusion, modal (must/may/only) or numeric content. Anything else never
+ * reaches a participant.
  *
  * Anchoring tolerates split/merge differences: a citation claim may span
  * several answer sentences, or vice versa — what matters is that the wording
@@ -60,6 +156,9 @@ export function verifyDraft(draft: AnswerDraft, retrieved: CorpusDoc[]): GateRes
       reasons.push(
         `claim drifts from source (containment ${c.toFixed(2)} < ${MIN_CONTAINMENT}): '${claimNorm.slice(0, 60)}…'`,
       );
+    }
+    for (const p of polarityProblems(cit.claim, doc)) {
+      reasons.push(`${p} — claim: '${claimNorm.slice(0, 60)}…'`);
     }
     if (doc.tags.includes("trap-stale-deadline")) {
       const acknowledges = claims.some((s) => /passed|closed|expired|no longer/i.test(s));

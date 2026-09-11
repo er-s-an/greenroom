@@ -27,7 +27,12 @@ export function topicPairs(docs: CorpusDoc[]): [CorpusDoc, CorpusDoc][] {
 }
 
 interface VerifiedRegistry {
-  findings: { pair: [string, string]; severity: "low" | "medium" | "high"; explanation: string }[];
+  findings: {
+    pair: [string, string];
+    severity: "low" | "medium" | "high";
+    explanation: string;
+    anchors?: [string, string];
+  }[];
 }
 
 /**

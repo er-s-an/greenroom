@@ -38,4 +38,10 @@ export interface ContradictionFinding {
   severity: Severity;
   explanation: string;
   verified: boolean;
+  /**
+   * Human-marked conflict locus: the verbatim sentence(s) in each paired doc
+   * that contradict each other. Drives fail-closed matching and is shown to
+   * the participant as the two conflicting excerpts.
+   */
+  anchors?: [string, string];
 }

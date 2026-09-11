@@ -16,6 +16,8 @@ export interface StateResponse {
   event: string;
   members: Member[];
   provider: string;
+  mode: "live" | "synthetic-replay";
+  synthetic: boolean;
 }
 
 export type StallKind =
@@ -32,6 +34,8 @@ export interface RadarFlag {
   detail: string;
 }
 
+export type DraftStatus = "pending" | "approved" | "rejected" | "send_failed" | "simulated" | "sent";
+
 export interface OutreachDraft {
   id: string;
   memberId: string;
@@ -39,10 +43,12 @@ export interface OutreachDraft {
   kind: StallKind;
   text: string;
   createdAt: number;
-  status: "pending" | "approved" | "rejected" | "sent";
+  status: DraftStatus;
   decidedBy?: string;
   decidedAt?: number;
   sentAt?: number;
+  reference?: string;
+  lastError?: string;
 }
 
 export interface AuditEvent {
@@ -58,12 +64,42 @@ export interface Citation {
   url?: string;
 }
 
+export interface ConflictSource {
+  docId: string;
+  title: string;
+  url?: string;
+  excerpt: string;
+}
+
+export interface ConflictBlock {
+  severity: "low" | "medium" | "high";
+  pair: [string, string];
+  explanation: string;
+  sources: [ConflictSource, ConflictSource];
+  routeTo: string;
+}
+
+export interface ContradictionFinding {
+  pair: [string, string];
+  severity: "low" | "medium" | "high";
+  explanation: string;
+  verified: boolean;
+  anchors?: [string, string];
+}
+
 export interface FaqResult {
   question: string;
-  decision: "answered" | "escalated";
+  decision: "answered" | "escalated" | "conflicted";
   answer?: string;
   citations?: Citation[];
-  alerts?: { kind: "doc-conflict"; severity: "low" | "medium" | "high"; pair: [string, string]; explanation: string }[];
+  conflict?: ConflictBlock;
+  alerts?: {
+    kind: "doc-conflict";
+    severity: "low" | "medium" | "high";
+    pair: [string, string];
+    explanation: string;
+    verified: true;
+  }[];
   escalation?: { reasons: string[]; routeTo: string };
   trace: { retrieved: { docId: string; score: number }[]; gateReasons?: string[] };
 }
@@ -102,8 +138,11 @@ export const api = {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ by, reason }),
     }).then((r) => j<OutreachDraft>(r)),
+  retry: (id: string) =>
+    fetch(`/api/approvals/${id}/retry`, { method: "POST" }).then((r) => j<OutreachDraft>(r)),
   audit: () => fetch("/api/audit").then((r) => j<AuditEvent[]>(r)),
-  sent: () => fetch("/api/sent").then((r) => j<OutreachDraft[]>(r)),
+  outbound: () => fetch("/api/outbound").then((r) => j<OutreachDraft[]>(r)),
+  contradictions: () => fetch("/api/contradictions").then((r) => j<ContradictionFinding[]>(r)),
   report: () => fetch("/api/report").then((r) => j<{ markdown: string }>(r)),
   ask: (question: string) =>
     fetch("/api/ask", {

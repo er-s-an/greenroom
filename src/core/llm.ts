@@ -37,12 +37,13 @@ export function splitSentences(text: string): string[] {
     .filter(Boolean);
 }
 
+/** Fraction of the question's content tokens covered by this sentence. */
 function overlapScore(question: Set<string>, sentence: string): number {
   const tokens = tokenize(sentence);
-  if (tokens.length === 0) return 0;
+  if (tokens.length === 0 || question.size === 0) return 0;
   let hit = 0;
-  for (const t of tokens) if (question.has(t)) hit++;
-  return hit / tokens.length;
+  for (const t of new Set(tokens)) if (question.has(t)) hit++;
+  return hit / question.size;
 }
 
 /** Parse JSON from a model response, tolerating code fences. */

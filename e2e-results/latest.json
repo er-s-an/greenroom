@@ -1,0 +1,62 @@
+{
+  "suite": "greenroom-ui-e2e",
+  "at": "2026-09-11T13:58:04.077Z",
+  "gitSha": "0b3ef7d",
+  "corpusHash": "46803dd9cd17b4ea",
+  "passed": 13,
+  "total": 13,
+  "results": [
+    {
+      "name": "dashboard loads with funnel",
+      "ok": true
+    },
+    {
+      "name": "synthetic replay chip is visible",
+      "ok": true
+    },
+    {
+      "name": "verified conflict listed in Doc conflicts panel",
+      "ok": true
+    },
+    {
+      "name": "fail-closed card appears (no one-sided verdict)",
+      "ok": true
+    },
+    {
+      "name": "both conflicting excerpts shown verbatim",
+      "ok": true
+    },
+    {
+      "name": "conflict marked human-verified with a human route",
+      "ok": true
+    },
+    {
+      "name": "off-topic escalates visibly",
+      "ok": true
+    },
+    {
+      "name": "draft cards appear in approval queue",
+      "ok": true
+    },
+    {
+      "name": "approved draft is labeled simulated, not sent",
+      "ok": true
+    },
+    {
+      "name": "no draft claims to be really sent",
+      "ok": true
+    },
+    {
+      "name": "audit trail records events incl. simulation honesty",
+      "ok": true
+    },
+    {
+      "name": "sponsor report renders",
+      "ok": true
+    },
+    {
+      "name": "report carries the synthetic-replay disclaimer",
+      "ok": true
+    }
+  ]
+}

@@ -28,19 +28,26 @@ function fixture() {
 describe("sponsor report", () => {
   it("computes the funnel and engagement from live state", () => {
     const { community, audit } = fixture();
-    const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE });
+    const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE, mode: "live" });
     expect(md).toContain("| registered | 1 | 50% |");
     expect(md).toContain("| submitted | 1 | 50% |");
     expect(md).toContain("Registered participants: 2");
+    expect(md).not.toContain("Synthetic replay");
   });
 
   it("counts copilot activity from the audit trail", () => {
     const { community, audit } = fixture();
-    const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE });
+    const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE, mode: "live" });
     expect(md).toContain("Questions answered with citations: 2");
     expect(md).toContain("Escalated to humans (no reliable source): 1");
-    expect(md).toContain("Documentation conflicts detected: 1");
-    expect(md).toContain("Sent: 1");
+    expect(md).toContain("Documentation conflicts surfaced: 1");
+    expect(md).toContain("Sent (real sender): 1");
+  });
+
+  it("marks synthetic replay numbers as demo data", () => {
+    const { community, audit } = fixture();
+    const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE, mode: "synthetic-replay" });
+    expect(md).toContain("Synthetic replay");
   });
 
   it("renders sponsor deliverables with anchor link", () => {
@@ -51,6 +58,7 @@ describe("sponsor report", () => {
       corpus,
       now: NOW,
       deadlineAt: DEADLINE,
+      mode: "live",
       sponsor: { name: "Tin Computer", anchorText: "Tin Computer", url: "https://tin.computer/" },
     });
     expect(md).toContain("Sponsor deliverables — Tin Computer");

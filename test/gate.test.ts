@@ -98,3 +98,83 @@ describe("citation gate", () => {
     expect(verifyDraft(draft, eligibilityDocs).verdict).toBe("escalate");
   });
 });
+
+// Adversarial suite: the lexical gate must also be polarity-safe. Source for
+// every case below is the real corpus; each flip once passed containment.
+describe("citation gate — polarity, quantifier & number guard", () => {
+  const structured = byId(corpus, "eligibility.structured")!;
+  const registration = byId(corpus, "participation.registration")!;
+  const discord = byId(corpus, "participation.discord")!;
+  const tin = byId(corpus, "prize.tin_credits")!;
+  const datesRules = byId(corpus, "dates.rules")!;
+  const datesAnnouncement = byId(corpus, "dates.announcement")!;
+
+  const run = (claim: string, doc: typeof structured) =>
+    verifyDraft({ text: claim, citations: [{ claim, docId: doc.id }] }, [doc]);
+
+  it("blocks the not-flip: 'not excluded' vs source 'excluded'", () => {
+    const claim = "Companies are not excluded from participation.";
+    const result = run(claim, structured);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("passes the faithful reading of the same sentence", () => {
+    const claim = "Companies/professional organizations excluded from participation.";
+    expect(run(claim, structured).verdict).toBe("pass");
+  });
+
+  it("blocks a never-flip on the mandatory Discord rule", () => {
+    const claim = "Joining our Discord server is never mandatory for all participants.";
+    const result = run(claim, discord);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("blocks a dropped negation: 'A credit card is required'", () => {
+    const claim = "A credit card is required.";
+    const result = run(claim, tin);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("blocks a must→may swap on account creation", () => {
+    const claim = "You may all create Devpost accounts.";
+    const result = run(claim, registration);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/modal\/quantifier/);
+  });
+
+  it("blocks a dropped geographic exclusion ('including Brazil…')", () => {
+    const claim =
+      "All countries/territories are eligible, including Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia.";
+    const result = run(claim, structured);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("passes the faithful geographic exclusion list", () => {
+    const claim =
+      "All countries/territories are eligible, excluding standard exceptions: Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia.";
+    expect(run(claim, structured).verdict).toBe("pass");
+  });
+
+  it("blocks a number swap that keeps every other word (25 → 20 days)", () => {
+    const claim = "Participants will have 20 days to design, build, test, and submit their AI-powered solutions.";
+    const result = run(claim, datesRules);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/drops number/);
+  });
+
+  it("blocks a date flip (Sep 15 → Sep 16)", () => {
+    const claim = "The submission deadline is Tue Sep 16, 2026 at 11:00 PM EDT.";
+    const result = run(claim, datesAnnouncement);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/number '16' does not appear/);
+  });
+
+  it("passes the verbatim deadline sentence", () => {
+    const claim = "You need to register now and submit your projects before the deadline (Tue Sep 15, 2026 at 11:00 PM EDT).";
+    expect(run(claim, datesAnnouncement).verdict).toBe("pass");
+  });
+});

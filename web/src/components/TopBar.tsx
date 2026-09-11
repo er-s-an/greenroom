@@ -27,6 +27,11 @@ export function TopBar({ state }: { state: StateResponse | null }) {
         Greenroom
       </div>
       <div className="topbar-meta">
+        {state?.synthetic && (
+          <span className="chip chip-replay" title="Demo mode: 12 synthetic members, fixed demo clock, demo sender. Nothing here is live event data.">
+            Synthetic replay
+          </span>
+        )}
         <span className="chip chip-event">{state?.event ?? "…"}</span>
         <span className={`chip ${hours !== null && hours < 72 ? "chip-amber" : "chip-green"}`}>
           <AnimatePresence mode="popLayout" initial={false}>

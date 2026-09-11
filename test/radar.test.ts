@@ -34,6 +34,18 @@ describe("community state machine", () => {
     ]);
     expect(c.get("u1")?.state).toBe("introduced");
   });
+
+  it("a late duplicate register refreshes facts but never drags state back", () => {
+    const c = replay([
+      { type: "register", memberId: "u1", handle: "ada", at: T0 },
+      { type: "submit", memberId: "u1", at: T0 + 4 * H },
+      { type: "register", memberId: "u1", handle: "ada-renamed", at: T0 + 5 * H },
+    ]);
+    const m = c.get("u1");
+    expect(m?.state).toBe("submitted");
+    expect(m?.stateSince).toBe(T0 + 4 * H);
+    expect(m?.handle).toBe("ada-renamed");
+  });
 });
 
 describe("stall radar", () => {
@@ -121,6 +133,56 @@ describe("approval gate", () => {
     await queue.approve(draft.id, "organizer");
     const kinds = audit.list().map((e) => e.kind);
     expect(kinds).toEqual(["outreach.approved", "outreach.sent"]);
+  });
+
+  it("a failing sender lands in send_failed, and retry recovers it idempotently", async () => {
+    let attempts = 0;
+    const audit = new AuditLog();
+    const queue = new ApprovalQueue({
+      send: () => {
+        attempts++;
+        if (attempts === 1) throw new Error("discord 503");
+      },
+      audit,
+      now: () => NOW,
+    });
+    const draft = queue.submit({ memberId: "u1", handle: "ada", kind: "gone-quiet", text: "nudge" });
+    await queue.approve(draft.id, "organizer");
+    expect(queue.get(draft.id)?.status).toBe("send_failed");
+    expect(queue.get(draft.id)?.lastError).toMatch(/503/);
+
+    await queue.retrySend(draft.id);
+    expect(queue.get(draft.id)?.status).toBe("sent");
+    expect(queue.get(draft.id)?.lastError).toBeUndefined();
+    expect(attempts).toBe(2);
+    const kinds = audit.list().map((e) => e.kind);
+    expect(kinds).toEqual([
+      "outreach.approved",
+      "outreach.send_failed",
+      "outreach.sent",
+    ]);
+  });
+
+  it("refuses to retry a draft that is not stuck", async () => {
+    const { queue } = setup();
+    const draft = queue.submit({ memberId: "u1", handle: "ada", kind: "gone-quiet", text: "nudge" });
+    await expect(queue.retrySend(draft.id)).rejects.toThrow(/pending/);
+  });
+
+  it("marks demo-sender outcomes as simulated — never as sent", async () => {
+    const audit = new AuditLog();
+    const queue = new ApprovalQueue({
+      send: () => ({ simulated: true, reference: "sim:od-1" }),
+      audit,
+      now: () => NOW,
+    });
+    const draft = queue.submit({ memberId: "u1", handle: "ada", kind: "gone-quiet", text: "nudge" });
+    await queue.approve(draft.id, "organizer");
+    expect(queue.get(draft.id)?.status).toBe("simulated");
+    expect(queue.get(draft.id)?.reference).toBe("sim:od-1");
+    const kinds = audit.list().map((e) => e.kind);
+    expect(kinds).toContain("outreach.simulated");
+    expect(kinds).not.toContain("outreach.sent");
   });
 
   it("drafts outreach for radar flags via the LLM, gated behind approval", async () => {
