@@ -6,7 +6,7 @@ Every answer needs a citation. Every outreach needs an approval. Every action le
 
 Greenroom watches an online community (a hackathon Discord, an open-source program, a course cohort), answers participant questions *only* when it can cite an official source, spots people who are silently dropping out, and drafts organizer-approved nudges — all under deterministic guardrails, so it can be trusted with a community of thousands.
 
-Built for the [AI Builders Hackathon 2026](https://ai-builders-hackathon-2026.devpost.com/).
+Built for the [AI Builders Hackathon 2026](https://ai-builders-hackathon-2026.devpost.com/). Submission deck: [`docs/greenroom-deck.pdf`](docs/greenroom-deck.pdf) (10 pages, source: `docs/deck.html`).
 
 ## Why
 

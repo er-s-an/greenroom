@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Greenroom — submission deck</title>
+<style>
+  :root {
+    --bg: #0b110e;
+    --bg-soft: #101814;
+    --surface: rgba(233, 228, 216, 0.028);
+    --surface-raise: rgba(233, 228, 216, 0.055);
+    --border: #223129;
+    --border-strong: #314539;
+    --text: #e9e4d8;
+    --text-dim: #8e968a;
+    --text-faint: #5d665b;
+    --accent: #d4a24e;
+    --accent-soft: rgba(212, 162, 78, 0.13);
+    --ok: #7fa66a;
+    --ok-soft: rgba(127, 166, 106, 0.12);
+    --alert: #c4634f;
+    --alert-soft: rgba(196, 99, 79, 0.12);
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  @page { size: 1280px 720px; margin: 0; }
+  @media print { .slide { page-break-after: always; break-after: page; } }
+
+  .slide {
+    width: 1280px; height: 720px;
+    padding: 72px 84px;
+    position: relative;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    background:
+      radial-gradient(1100px 500px at 85% -10%, rgba(212,162,78,0.05), transparent 60%),
+      var(--bg);
+  }
+  .kicker {
+    font-family: var(--mono); font-size: 15px; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 18px;
+  }
+  .pagenum {
+    position: absolute; right: 84px; bottom: 48px;
+    font-family: var(--mono); font-size: 13px; color: var(--text-faint);
+  }
+  .brandmark {
+    position: absolute; left: 84px; bottom: 48px;
+    font-family: var(--mono); font-size: 13px; color: var(--text-faint);
+  }
+  h1 { font-size: 76px; line-height: 1.04; letter-spacing: -0.02em; font-weight: 650; }
+  h2 { font-size: 44px; line-height: 1.12; letter-spacing: -0.015em; font-weight: 620; }
+  .sub { font-size: 22px; color: var(--text-dim); line-height: 1.5; margin-top: 22px; max-width: 900px; }
+  .mono { font-family: var(--mono); }
+  .accent { color: var(--accent); }
+  .ok { color: var(--ok); }
+  .alert { color: var(--alert); }
+  .dim { color: var(--text-dim); }
+
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 14px; padding: 26px 28px;
+  }
+  .card.raised { background: var(--surface-raise); border-color: var(--border-strong); }
+  .row { display: flex; gap: 22px; }
+  .grow { flex: 1; min-width: 0; }
+  ul.tight { list-style: none; }
+  ul.tight li { font-size: 19px; line-height: 1.5; color: var(--text-dim); padding-left: 26px; position: relative; margin-bottom: 12px; }
+  ul.tight li::before { content: "—"; position: absolute; left: 0; color: var(--accent); }
+  ul.tight li b { color: var(--text); font-weight: 600; }
+
+  .badge {
+    display: inline-block; font-family: var(--mono); font-size: 12.5px;
+    padding: 4px 10px; border-radius: 999px; letter-spacing: 0.04em;
+  }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); border: 1px solid rgba(127,166,106,0.35); }
+  .badge.alert { background: var(--alert-soft); color: var(--alert); border: 1px solid rgba(196,99,79,0.35); }
+  .badge.accent { background: var(--accent-soft); color: var(--accent); border: 1px solid rgba(212,162,78,0.35); }
+
+  .quote {
+    font-size: 16.5px; line-height: 1.55; color: var(--text);
+    font-family: var(--sans);
+  }
+  .quote-src { font-family: var(--mono); font-size: 12.5px; color: var(--text-faint); margin-top: 12px; }
+
+  .stat { font-size: 54px; font-weight: 650; letter-spacing: -0.02em; }
+  .stat-label { font-size: 16px; color: var(--text-dim); margin-top: 6px; line-height: 1.4; }
+
+  .flow { display: flex; align-items: stretch; gap: 14px; margin-top: 26px; }
+  .flow .step {
+    flex: 1; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 18px 16px; text-align: center;
+  }
+  .flow .step .t { font-size: 17px; font-weight: 600; }
+  .flow .step .d { font-size: 13.5px; color: var(--text-dim); margin-top: 6px; line-height: 1.45; }
+  .flow .arrow { align-self: center; color: var(--text-faint); font-family: var(--mono); font-size: 18px; }
+
+  .slide-in { animation: rise 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+  .d1 { animation-delay: 0.08s } .d2 { animation-delay: 0.16s } .d3 { animation-delay: 0.24s }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media print { .slide-in { animation: none; } }
+</style>
+</head>
+<body>
+
+<!-- 1 · title -->
+<section class="slide">
+  <div class="kicker slide-in">AI Builders Hackathon 2026 · submission deck</div>
+  <h1 class="slide-in d1">Greenroom</h1>
+  <div class="sub slide-in d2" style="font-size:30px; color:var(--text); margin-top:14px;">
+    The AI copilot for hackathon &amp; community organizers — <span class="accent">with gates</span>.
+  </div>
+  <div class="sub slide-in d3">
+    Every answer needs a citation. Every outreach needs an approval. Every action leaves a trail.<br>
+    <span class="dim" style="font-size:17px;">Built on this hackathon's own published rules. Demo runs on an explicitly labeled synthetic replay.</span>
+  </div>
+  <div class="row slide-in d3" style="margin-top:auto; margin-bottom:56px;">
+    <div class="card grow" style="padding:16px 22px;"><span class="badge accent">citation gate</span></div>
+    <div class="card grow" style="padding:16px 22px;"><span class="badge accent">approval gate</span></div>
+    <div class="card grow" style="padding:16px 22px;"><span class="badge accent">audit trail</span></div>
+    <div class="card grow" style="padding:16px 22px;"><span class="badge alert">fail-closed on conflict</span></div>
+  </div>
+  <div class="brandmark">github.com/er-s-an/greenroom</div>
+  <div class="pagenum">1 / 10</div>
+</section>
+
+<!-- 2 · problem -->
+<section class="slide">
+  <div class="kicker slide-in">The problem</div>
+  <h2 class="slide-in d1">3,063 participants. One Discord server.<br>No operator.</h2>
+  <div class="row slide-in d2" style="margin-top:44px;">
+    <div class="card grow">
+      <div class="stat accent">×11</div>
+      <div class="stat-label">the same rules question, asked again at 2am — organizers answer by hand or not at all</div>
+    </div>
+    <div class="card grow">
+      <div class="stat accent">4 days</div>
+      <div class="stat-label">registered, never joined, never introduced — silent attrition nobody sees until submissions</div>
+    </div>
+    <div class="card grow">
+      <div class="stat accent">1 by hand</div>
+      <div class="stat-label">sponsor engagement report compiled at midnight, numbers nobody can reproduce</div>
+    </div>
+  </div>
+  <div class="sub slide-in d3">
+    Dashboards show the problem but don't act. Chatbots act, but can't be trusted not to invent rules.
+    <b style="color:var(--text)">Organizers need an operator that is powerful because it is constrained.</b>
+  </div>
+  <div class="brandmark">greenroom</div><div class="pagenum">2 / 10</div>
+</section>
+
+<!-- 3 · three gates -->
+<section class="slide">
+  <div class="kicker slide-in">The answer</div>
+  <h2 class="slide-in d1">Three deterministic gates.<br>The LLM only writes wording.</h2>
+  <div class="row slide-in d2" style="margin-top:40px;">
+    <div class="card raised grow">
+      <div class="badge accent">gate 1</div>
+      <div style="font-size:24px; font-weight:620; margin:14px 0 10px;">Citation Gate</div>
+      <div class="dim" style="font-size:16.5px; line-height:1.55;">Every answer sentence anchors to one official source sentence and stays faithful to it — no flipped "not", no swapped "must", no changed number. Otherwise: deterministic escalation to a human.</div>
+    </div>
+    <div class="card raised grow">
+      <div class="badge accent">gate 2</div>
+      <div style="font-size:24px; font-weight:620; margin:14px 0 10px;">Approval Gate</div>
+      <div class="dim" style="font-size:16.5px; line-height:1.55;">The copilot drafts outreach to stalled participants — nothing is ever sent until a human organizer clicks approve. Failed sends retry; crash-interrupted sends are flagged, never silently repeated.</div>
+    </div>
+    <div class="card raised grow">
+      <div class="badge accent">gate 3</div>
+      <div style="font-size:24px; font-weight:620; margin:14px 0 10px;">Audit Trail</div>
+      <div class="dim" style="font-size:16.5px; line-height:1.55;">Every answer, refusal, conflict, draft, approval and send is an append-only record. Reports are computed from the trail — numbers you can reproduce by hand.</div>
+    </div>
+  </div>
+  <div class="sub slide-in d3">And when official sources disagree with each other, Greenroom <b style="color:var(--text)">fails closed</b>: both sources verbatim, a human route — never a one-sided verdict.</div>
+  <div class="brandmark">greenroom</div><div class="pagenum">3 / 10</div>
+</section>
+
+<!-- 4 · money moment -->
+<section class="slide">
+  <div class="kicker slide-in">Money moment — a real conflict in this hackathon's own rules</div>
+  <h2 class="slide-in d1">"Can companies participate?"<br><span class="alert">Greenroom refuses to guess.</span></h2>
+  <div class="row slide-in d2" style="margin-top:34px;">
+    <div class="card grow">
+      <div class="badge accent">official rules prose</div>
+      <div class="quote" style="margin-top:14px;">"Eligible participants include: … <b>Startup founders and entrepreneurs</b>, Open-source contributors and technology enthusiasts."</div>
+      <div class="quote-src">eligibility.rules_text — ai-builders-hackathon-2026.devpost.com/rules</div>
+    </div>
+    <div class="card grow" style="border-color:rgba(196,99,79,0.45);">
+      <div class="badge alert">official structured settings</div>
+      <div class="quote" style="margin-top:14px;">"<b>Students only.</b> Companies/professional organizations <b>excluded</b> from participation."</div>
+      <div class="quote-src">eligibility.structured — ai-builders-hackathon-2026.devpost.com/rules</div>
+    </div>
+  </div>
+  <div class="sub slide-in d3" style="margin-top:26px;">
+    <span class="badge ok">verified by a human</span>&nbsp;&nbsp;Both sources shown verbatim. Routed to a human organizer. <span class="dim">Most bots pick one and answer; an operator admits when the rules disagree.</span>
+  </div>
+  <div class="brandmark">greenroom</div><div class="pagenum">4 / 10</div>
+</section>
+
+<!-- 5 · citation gate mechanics -->
+<section class="slide">
+  <div class="kicker slide-in">Gate 1 — how the Citation Gate actually works</div>
+  <h2 class="slide-in d1">Deterministic. Per sentence.<br>Not prompt engineering.</h2>
+  <div class="flow slide-in d2">
+    <div class="step"><div class="t">retrieve</div><div class="d">BM25 over the curated corpus of official documents</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">draft</div><div class="d">LLM words an answer, near-verbatim, sentence-level citations</div></div>
+    <div class="arrow">→</div>
+    <div class="step" style="border-color:rgba(212,162,78,0.5);"><div class="t accent">gate</div><div class="d">every sentence anchors to one source sentence; polarity, modal &amp; number signatures must match</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">decide</div><div class="d"><span class="ok">answered</span> · <span class="dim">escalated</span> · <span class="alert">conflicted</span></div></div>
+  </div>
+  <ul class="tight slide-in d3" style="margin-top:34px;">
+    <li><b>Merged citations can't smuggle violations</b> — a flipped "never mandatory" hiding behind a faithful sentence is still caught; each claim sentence is anchored on its own.</li>
+    <li><b>Stale information never ships as current</b> — a passed application deadline is acknowledged, not offered.</li>
+    <li><b>One repair pass with the gate's exact reasons</b> — wording gets fixed; fabrications still escalate.</li>
+  </ul>
+  <div class="brandmark">greenroom</div><div class="pagenum">5 / 10</div>
+</section>
+
+<!-- 6 · stall radar + approval -->
+<section class="slide">
+  <div class="kicker slide-in">Gate 2 — stall radar behind the Approval Gate</div>
+  <h2 class="slide-in d1">Every participant is a state machine.<br>Every nudge waits for a human click.</h2>
+  <div class="flow slide-in d2" style="margin-top:30px;">
+    <div class="step"><div class="t dim">registered</div></div><div class="arrow">→</div>
+    <div class="step"><div class="t dim">joined</div></div><div class="arrow">→</div>
+    <div class="step"><div class="t dim">introduced</div></div><div class="arrow">→</div>
+    <div class="step"><div class="t dim">active</div></div><div class="arrow">→</div>
+    <div class="step"><div class="t">submitted</div></div>
+  </div>
+  <ul class="tight slide-in d3" style="margin-top:32px;">
+    <li><b>Stall radar</b> flags who is stuck where — never-joined, never-introduced, gone-quiet, missing-submission — and drafts a nudge matched to the reason.</li>
+    <li><b>Nothing sends itself</b> — drafts sit in the approval queue until an organizer approves or rejects with a reason.</li>
+    <li><b>Honest delivery states</b> — <span class="mono" style="font-size:15px;">sent</span> requires a real receipt; the demo sender is labeled <span class="mono" style="font-size:15px;">simulated</span>; failures land in <span class="mono" style="font-size:15px;">send_failed</span> and retry idempotently; a crash mid-send is recovered as "outcome unknown", never silently resent.</li>
+  </ul>
+  <div class="brandmark">greenroom</div><div class="pagenum">6 / 10</div>
+</section>
+
+<!-- 7 · audit + report -->
+<section class="slide">
+  <div class="kicker slide-in">Gate 3 — audit trail &amp; sponsor report</div>
+  <h2 class="slide-in d1">Numbers a sponsor can reproduce.</h2>
+  <div class="row slide-in d2" style="margin-top:38px;">
+    <div class="card grow">
+      <div style="font-size:20px; font-weight:620; margin-bottom:14px;">One click, computed from the trail</div>
+      <ul class="tight">
+        <li>Participation funnel &amp; 72h activity</li>
+        <li>Copilot support load: answered / escalated / <b>conflicted</b> counted separately</li>
+        <li>Outreach: drafted, approved, <b>sent vs simulated never merged</b>, failed, rejected</li>
+        <li>Sponsor deliverables with anchor links and reach</li>
+      </ul>
+    </div>
+    <div class="card grow">
+      <div style="font-size:20px; font-weight:620; margin-bottom:14px;">Radical honesty by default</div>
+      <ul class="tight">
+        <li>Every figure recomputes from <span class="mono" style="font-size:15px;">audit.jsonl</span> — open the file, check the math</li>
+        <li>Demo data is marked <span class="badge accent">synthetic replay</span> on the report itself</li>
+        <li>Unverified conflict candidates wait in a review queue — they never reach participants</li>
+      </ul>
+    </div>
+  </div>
+  <div class="brandmark">greenroom</div><div class="pagenum">7 / 10</div>
+</section>
+
+<!-- 8 · evidence -->
+<section class="slide">
+  <div class="kicker slide-in">Evidence — check it yourself</div>
+  <h2 class="slide-in d1">The gates are tested, not promised.</h2>
+  <div class="row slide-in d2" style="margin-top:40px;">
+    <div class="card grow">
+      <div class="stat ok">73/73</div>
+      <div class="stat-label">unit tests — incl. an adversarial polarity suite: not/never flips, must↔may swaps, dropped exclusions, date &amp; number drift, and the same violations merged into a single citation claim</div>
+    </div>
+    <div class="card grow">
+      <div class="stat ok">13/13</div>
+      <div class="stat-label">real-browser E2E — fail-closed money moment, escalation, approval → simulated send, audit, report</div>
+    </div>
+    <div class="card grow">
+      <div class="stat ok">23/23</div>
+      <div class="stat-label">live eval against hosted Kimi K2.7 — paraphrases, typos, non-English, stale traps, fabrication bait; zero over-escalation</div>
+    </div>
+  </div>
+  <ul class="tight slide-in d3" style="margin-top:32px;">
+    <li><b>Generalization</b> — the identical pipeline, zero tuning, answers a second hackathon's rules (Nebius × NVIDIA) — including the opposite eligibility answer.</li>
+    <li><b>Evidence is bound to the code</b> — every artifact records the source-tree hash, corpus hash and tool versions; recompute the hash at HEAD to verify.</li>
+  </ul>
+  <div class="brandmark">greenroom</div><div class="pagenum">8 / 10</div>
+</section>
+
+<!-- 9 · architecture -->
+<section class="slide">
+  <div class="kicker slide-in">Architecture</div>
+  <h2 class="slide-in d1">All decisions deterministic.<br>Providers swap; permissions don't.</h2>
+  <div class="row slide-in d2" style="margin-top:38px;">
+    <div class="card raised grow">
+      <div class="badge accent">core — pure logic, zero I/O</div>
+      <ul class="tight" style="margin-top:14px;">
+        <li>BM25 retrieval · per-sentence citation gate</li>
+        <li>conflict scanner: detector proposes, human registry disposes</li>
+        <li>lifecycle state machine · stall rules · approval queue</li>
+        <li>append-only audit · deterministic report</li>
+      </ul>
+    </div>
+    <div class="card grow">
+      <div class="badge">edges</div>
+      <ul class="tight" style="margin-top:14px;">
+        <li><b>LLM</b> — Kimi K2.7 hosted ⇄ deterministic offline mock, same gate</li>
+        <li><b>Server</b> — Fastify API, JSON/JSONL persistence, atomic snapshots</li>
+        <li><b>Dashboard</b> — React organizer workbench</li>
+        <li><b>Discord adapter</b> — implemented (tri-state replies, DM receipts); live-guild pilot is next</li>
+      </ul>
+    </div>
+  </div>
+  <div class="sub slide-in d3">Privacy is a feature: radar reads only public-channel metadata; outreach is opt-in and human-approved.</div>
+  <div class="brandmark">greenroom</div><div class="pagenum">9 / 10</div>
+</section>
+
+<!-- 10 · status & next -->
+<section class="slide">
+  <div class="kicker slide-in">Status &amp; what's next</div>
+  <h2 class="slide-in d1">Usable by this hackathon's organizers<br>tomorrow — and honest about today.</h2>
+  <div class="row slide-in d2" style="margin-top:38px;">
+    <div class="card grow">
+      <div class="badge ok">real today</div>
+      <ul class="tight" style="margin-top:14px;">
+        <li>Full loop offline: question → cited answer / fail-closed → stall flag → approved nudge → audit → sponsor report</li>
+        <li>A genuine, human-verified conflict surfaced in this event's own rules</li>
+        <li>Cold-start reproducible: install → test → build → browser E2E</li>
+      </ul>
+    </div>
+    <div class="card grow">
+      <div class="badge accent">next</div>
+      <ul class="tight" style="margin-top:14px;">
+        <li>Live-guild Discord pilot (adapter implemented; wiring &amp; verification next)</li>
+        <li>Real registration/submission feeds with a proper data contract</li>
+        <li>Organizer pilot measuring response time and stall-recovery</li>
+      </ul>
+    </div>
+  </div>
+  <div class="sub slide-in d3" style="font-size:19px;">
+    github.com/er-s-an/greenroom — README has the 2-minute verification script.<br>
+    <span class="dim">Demo data is synthetic and labeled as such. No adoption or live deployment is claimed.</span>
+  </div>
+  <div class="brandmark">greenroom</div><div class="pagenum">10 / 10</div>
+</section>
+
+</body>
+</html>
