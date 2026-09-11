@@ -2,18 +2,20 @@
  * UI smoke test: boots the real server (mock LLM, throwaway data dir) and
  * drives the dashboard with a real browser. Run: pnpm e2e
  *
- * Playwright is NOT a bundled dependency (heavy). Resolution order:
- *   1. local node_modules (pnpm add -D playwright)
+ * Playwright is a locked devDependency. Resolution order (for exotic setups):
+ *   1. local node_modules (standard, via pnpm install)
  *   2. PLAYWRIGHT_REQUIRE_ROOT env var (a path createRequire can start from)
  *   3. the global npm root (`npm root -g`)
+ * Browser: system Chrome via channel "chrome", falling back to the bundled
+ * chromium (pnpm exec playwright install chromium if missing).
  * Writes a machine-readable artifact to e2e-results/.
  */
 import { spawn, execSync, type ChildProcess } from "node:child_process";
-import { createHash } from "node:crypto";
-import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
+import { artifactMeta } from "./artifact-meta.mjs";
 
 function loadPlaywright(): { chromium: any } {
   const roots = [import.meta.url];
@@ -58,21 +60,6 @@ async function waitForServer(timeoutMs = 15000): Promise<void> {
   throw new Error("server did not come up");
 }
 
-function gitSha(): string {
-  try {
-    return execSync("git rev-parse --short HEAD").toString().trim();
-  } catch {
-    return "unknown";
-  }
-}
-
-function corpusHash(): string {
-  const h = createHash("sha256");
-  h.update(readFileSync("data/corpus/ai-builders-hackathon-2026.json"));
-  h.update(readFileSync("data/corpus/contradictions.verified.json"));
-  return h.digest("hex").slice(0, 16);
-}
-
 async function main() {
   const dataDir = mkdtempSync(join(tmpdir(), "greenroom-e2e-"));
   server = spawn("pnpm", ["dev"], {
@@ -81,7 +68,13 @@ async function main() {
   });
   await waitForServer();
 
-  const browser = await chromium.launch({ channel: "chrome" });
+  let browser;
+  try {
+    browser = await chromium.launch({ channel: "chrome" });
+  } catch {
+    // No system Chrome — use the bundled chromium (playwright install chromium).
+    browser = await chromium.launch();
+  }
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
@@ -152,8 +145,7 @@ const failed = results.filter((r) => !r.ok);
 const artifact = {
   suite: "greenroom-ui-e2e",
   at: new Date().toISOString(),
-  gitSha: gitSha(),
-  corpusHash: corpusHash(),
+  ...artifactMeta(),
   passed: results.length - failed.length,
   total: results.length,
   results,

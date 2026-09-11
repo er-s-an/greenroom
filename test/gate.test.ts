@@ -178,3 +178,60 @@ describe("citation gate — polarity, quantifier & number guard", () => {
     expect(run(claim, datesAnnouncement).verdict).toBe("pass");
   });
 });
+
+// Merged-claim adversarial suite: each case pairs one violating sentence with
+// one faithful sentence inside a SINGLE citation claim. Merging must not let
+// the violation slip past the polarity/modal/number guard.
+describe("citation gate — merged citation claims cannot smuggle violations", () => {
+  const structured = byId(corpus, "eligibility.structured")!;
+  const registration = byId(corpus, "participation.registration")!;
+  const discord = byId(corpus, "participation.discord")!;
+  const datesRules = byId(corpus, "dates.rules")!;
+
+  const run = (claim: string, doc: typeof structured) =>
+    verifyDraft({ text: claim, citations: [{ claim, docId: doc.id }] }, [doc]);
+
+  it("blocks 'never mandatory' merged with a faithful sentence", () => {
+    const claim =
+      "Joining our Discord server is never mandatory for all participants. Once you join, introduce yourself and share your country.";
+    const result = run(claim, discord);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("blocks 'not excluded' merged with an unrelated faithful sentence", () => {
+    const claim = "Companies are not excluded from participation. Students only.";
+    const result = run(claim, structured);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("blocks a must→may swap merged with a faithful sentence", () => {
+    const claim = "You may all create Devpost accounts. One person from each team will Enter a Submission.";
+    const result = run(claim, registration);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/modal\/quantifier/);
+  });
+
+  it("blocks a dropped geographic exclusion merged with a faithful sentence", () => {
+    const claim = "All countries/territories are eligible. Students only.";
+    const result = run(claim, structured);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/drops the negation\/modal\/number/);
+  });
+
+  it("blocks a dropped number merged with a faithful sentence", () => {
+    const claim =
+      "Participants will have time to design, build, test, and submit their AI-powered solutions. Registration Opens: 16 June 2026.";
+    const result = run(claim, datesRules);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/drops number/);
+  });
+
+  it("still tolerates a merged claim when both sentences are faithful", () => {
+    const doc = byId(corpus, "participation.registration")!;
+    const text =
+      "One person from each team will Enter a Submission. Where it asks you to add your teammates' email addresses, use the same ones they used to create their Devpost accounts.";
+    expect(verifyDraft({ text, citations: [{ claim: text, docId: doc.id }] }, [doc]).verdict).toBe("pass");
+  });
+});

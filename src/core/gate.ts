@@ -74,8 +74,14 @@ function cueSignature(text: string): Cues {
   return { neg: neg.sort(), modal: modal.sort(), nums: nums.sort() };
 }
 
-/** A claim paraphrases one source sentence when this much of it is covered there. */
+/** A claim sentence paraphrases one source sentence when this much of it is covered there. */
 const ANCHOR_SCORE = 0.75;
+/**
+ * Below the anchor score but above this, a cue-free sentence still overlaps a
+ * rule-bearing source sentence enough that dropping its negation/modal/number
+ * content is more likely than an innocent paraphrase — fail closed.
+ */
+const NEAR_MISS = 0.5;
 
 function polarityProblems(claim: string, doc: CorpusDoc): string[] {
   const problems: string[] = [];
@@ -89,29 +95,47 @@ function polarityProblems(claim: string, doc: CorpusDoc): string[] {
     }
   }
 
-  const sentences = splitSentences(doc.body);
-  let best: { s: string; score: number } = { s: "", score: 0 };
-  for (const s of sentences) {
-    const score = containment(claim, s);
-    if (score > best.score) best = { s, score };
-  }
-  // Below the anchor threshold the claim spans several source sentences;
-  // whole-doc containment already gates that case.
-  if (best.score >= ANCHOR_SCORE) {
-    const src = cueSignature(best.s);
-    if (claimCues.neg.join("|") !== src.neg.join("|")) {
-      problems.push(
-        `negation/exclusion differs from source sentence '${best.s.slice(0, 70)}…' (claim flips or drops it)`,
-      );
+  const srcSentences = splitSentences(doc.body);
+  // Every claim sentence anchors on its own. Checking the whole (possibly
+  // merged) claim against one best source sentence lets a flipped sentence
+  // hide behind a faithful one: the merge dilutes containment below the
+  // anchor threshold and the polarity check would never run.
+  for (const sentence of splitSentences(claim)) {
+    const cues = cueSignature(sentence);
+    let best: { s: string; score: number } = { s: "", score: 0 };
+    for (const src of srcSentences) {
+      const score = containment(sentence, src);
+      if (score > best.score) best = { s: src, score };
     }
-    if (claimCues.modal.join("|") !== src.modal.join("|")) {
-      problems.push(
-        `modal/quantifier (must/may/only) differs from source sentence '${best.s.slice(0, 70)}…'`,
-      );
-    }
-    const dropped = src.nums.filter((n) => !claimCues.nums.includes(n));
-    if (dropped.length > 0) {
-      problems.push(`claim drops number(s) ${dropped.join(", ")} from its source sentence`);
+    if (best.score >= ANCHOR_SCORE) {
+      const src = cueSignature(best.s);
+      if (cues.neg.join("|") !== src.neg.join("|")) {
+        problems.push(
+          `negation/exclusion differs from source sentence '${best.s.slice(0, 70)}…' (claim flips or drops it)`,
+        );
+      }
+      if (cues.modal.join("|") !== src.modal.join("|")) {
+        problems.push(
+          `modal/quantifier (must/may/only) differs from source sentence '${best.s.slice(0, 70)}…'`,
+        );
+      }
+      const dropped = src.nums.filter((n) => !cues.nums.includes(n));
+      if (dropped.length > 0) {
+        problems.push(`claim drops number(s) ${dropped.join(", ")} from its source sentence`);
+      }
+    } else {
+      const claimRisk = cues.neg.length + cues.modal.length + cues.nums.length;
+      const srcCues = cueSignature(best.s);
+      const srcRisk = srcCues.neg.length + srcCues.modal.length + srcCues.nums.length;
+      if (claimRisk > 0) {
+        problems.push(
+          `sentence carries negation/modal/number cues but anchors to no single source sentence (best ${best.score.toFixed(2)}): '${sentence.slice(0, 70)}…'`,
+        );
+      } else if (best.score >= NEAR_MISS && srcRisk > 0) {
+        problems.push(
+          `sentence drops the negation/modal/number content of its closest source sentence '${best.s.slice(0, 70)}…'`,
+        );
+      }
     }
   }
   return problems;
@@ -120,10 +144,12 @@ function polarityProblems(claim: string, doc: CorpusDoc): string[] {
 /**
  * The citation gate. Deterministic. The LLM may word an answer, but every
  * sentence must be covered by a citation to a retrieved document, every
- * citation must anchor to the answer text, every claim must stay inside its
- * source's vocabulary, and a claim may not flip or drop the source's negation,
- * exclusion, modal (must/may/only) or numeric content. Anything else never
- * reaches a participant.
+ * citation must anchor to the answer text, and every claim must stay inside
+ * its source's vocabulary. Polarity checks run per claim sentence — so a
+ * flipped sentence cannot hide inside a merged citation claim — and no
+ * sentence may flip or drop the source's negation, exclusion, modal
+ * (must/may/only) or numeric content, nor drop that content from the source
+ * sentence it closest resembles. Anything else never reaches a participant.
  *
  * Anchoring tolerates split/merge differences: a citation claim may span
  * several answer sentences, or vice versa — what matters is that the wording

@@ -52,6 +52,24 @@ export interface FaqResult {
 }
 
 /**
+ * The audit event kind for an FAQ outcome. Every entrypoint (web API, CLI,
+ * report CLI, Discord adapter) records the SAME tri-state — a conflicted
+ * question is never logged as an ordinary escalation.
+ */
+export function faqAuditKind(
+  result: FaqResult,
+): "faq.answered" | "faq.escalated" | "faq.conflicted" {
+  switch (result.decision) {
+    case "answered":
+      return "faq.answered";
+    case "conflicted":
+      return "faq.conflicted";
+    case "escalated":
+      return "faq.escalated";
+  }
+}
+
+/**
  * Below this BM25 score we consider the corpus silent on the question.
  * Calibrated on the curated corpus: high-df words like "hackathon" depress
  * scores even for on-topic questions (~1.2), while truly off-topic questions

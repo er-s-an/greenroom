@@ -27,10 +27,32 @@ export interface SendOutcome {
 }
 
 /**
+ * Restart recovery for the crash window between a real send and its snapshot.
+ * A draft restored as `approved` (decided, but no sent/simulated/failed
+ * outcome on disk) may or may not have been delivered — mark it send_failed
+ * with an explicit warning instead of risking a silent duplicate resend.
+ */
+export function recoverUnknownDeliveries(drafts: OutreachDraft[]): OutreachDraft[] {
+  return drafts.map((d) =>
+    d.status === "approved"
+      ? {
+          ...d,
+          status: "send_failed" as const,
+          lastError:
+            "restart interrupted the send; delivery outcome unknown — verify with the participant before retrying",
+        }
+      : d,
+  );
+}
+
+/**
  * The approval gate. Every outbound message the copilot drafts sits here until
  * a human organizer approves or rejects it. The send function is injected, so
  * tests can prove nothing leaves without approval. A failed send never strands
  * a draft: it lands in `send_failed` and can be retried idempotently.
+ * The optional `persist` hook is called write-ahead (before the send, while
+ * the draft is still `approved`) and after the outcome is recorded, narrowing
+ * the crash window to a recoverable, loudly-marked state.
  */
 export class ApprovalQueue {
   private drafts = new Map<string, OutreachDraft>();
@@ -41,6 +63,8 @@ export class ApprovalQueue {
       send: (draft: OutreachDraft) => SendOutcome | void | Promise<SendOutcome | void>;
       audit?: AuditLog;
       now?: () => number;
+      /** Write-ahead snapshot hook — invoked before and after every send. */
+      persist?: () => void;
     },
     initial: OutreachDraft[] = [],
   ) {
@@ -115,6 +139,10 @@ export class ApprovalQueue {
   }
 
   private async attemptSend(draft: OutreachDraft): Promise<void> {
+    // Write-ahead: persist the decided-but-unsent state before touching the
+    // network. A crash after the real send and before the next snapshot
+    // restores `approved`, which recoverUnknownDeliveries() flags loudly.
+    this.deps.persist?.();
     try {
       const outcome = (await this.deps.send(draft)) ?? { simulated: false };
       draft.status = outcome.simulated ? "simulated" : "sent";
@@ -137,6 +165,7 @@ export class ApprovalQueue {
         { draftId: draft.id, error: draft.lastError },
       );
     }
+    this.deps.persist?.();
   }
 
   private mustGet(id: string): OutreachDraft {

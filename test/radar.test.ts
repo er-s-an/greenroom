@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { Community, scan, draftOutreachForFlags, type RadarEvent } from "../src/core/radar.js";
-import { ApprovalQueue } from "../src/core/approvals.js";
+import { ApprovalQueue, recoverUnknownDeliveries } from "../src/core/approvals.js";
 import { AuditLog } from "../src/core/audit.js";
 import { MockLlm } from "../src/core/llm.js";
 
@@ -183,6 +183,35 @@ describe("approval gate", () => {
     const kinds = audit.list().map((e) => e.kind);
     expect(kinds).toContain("outreach.simulated");
     expect(kinds).not.toContain("outreach.sent");
+  });
+
+  it("invokes the persist hook write-ahead and after the outcome", async () => {
+    const snapshots: string[] = [];
+    const queue = new ApprovalQueue({
+      send: () => ({ simulated: false, reference: "msg-1" }),
+      persist: () => snapshots.push("persist"),
+      now: () => NOW,
+    });
+    const draft = queue.submit({ memberId: "u1", handle: "ada", kind: "gone-quiet", text: "nudge" });
+    await queue.approve(draft.id, "organizer");
+    expect(snapshots).toHaveLength(2); // before the send (approved) + after (sent)
+    expect(queue.get(draft.id)?.reference).toBe("msg-1");
+  });
+
+  it("recoverUnknownDeliveries flags crash-window drafts instead of resending silently", () => {
+    const restored = recoverUnknownDeliveries([
+      {
+        id: "od-1", memberId: "u1", handle: "ada", kind: "gone-quiet", text: "nudge",
+        createdAt: NOW, status: "approved", decidedBy: "org", decidedAt: NOW,
+      },
+      {
+        id: "od-2", memberId: "u2", handle: "bo", kind: "gone-quiet", text: "yo",
+        createdAt: NOW, status: "sent", sentAt: NOW, reference: "msg-9",
+      },
+    ]);
+    expect(restored[0]?.status).toBe("send_failed");
+    expect(restored[0]?.lastError).toMatch(/outcome unknown/);
+    expect(restored[1]?.status).toBe("sent");
   });
 
   it("drafts outreach for radar flags via the LLM, gated behind approval", async () => {

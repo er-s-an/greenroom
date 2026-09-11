@@ -7,7 +7,7 @@ pnpm install
 pnpm test
 ```
 
-59 unit tests cover the safety properties:
+73 unit tests cover the safety properties:
 
 | Property | Test |
 |---|---|
@@ -18,14 +18,17 @@ pnpm test
 | A must↔may swap never ships | `› blocks a must→may swap` |
 | A dropped geographic exclusion never ships | `› blocks a dropped geographic exclusion` |
 | Swapped numbers/dates never ship | `› blocks a number swap`, `› blocks a date flip` |
+| A violating sentence merged into one citation claim with a faithful sentence never ships | `› merged citation claims cannot smuggle violations` (5 cases) |
 | A verified doc conflict fails closed — no one-sided verdict | `test/faq.test.ts › money moment: 'Can companies participate?' fails closed` |
 | Unverified detector candidates never reach participants | `› never surfaces unverified detector candidates` |
 | Stale deadlines are never presented as open | `test/gate.test.ts › requires staleness acknowledgement` |
 | Off-topic questions escalate to humans instead of hallucinating | `test/faq.test.ts › escalates off-topic questions` |
+| Deadline answers never mix in another program's dates | `› deadline smoke cites ONLY this event's deadline` |
 | Outreach is never sent before human approval | `test/radar.test.ts › sends nothing before approval` |
 | Rejected drafts can never be sent later | `› rejected drafts are never sent` |
 | A failed send lands in send_failed and retry recovers it | `› a failing sender lands in send_failed` |
 | Demo sends are labeled simulated, never "sent" | `› marks demo-sender outcomes as simulated` |
+| A crash mid-send comes back flagged, never silently resent | `› recoverUnknownDeliveries flags crash-window drafts` |
 | Decisions survive restarts (incl. rejections and send failures) | `test/store.test.ts` |
 
 ## Try the pipeline

@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { loadCorpus } from "../core/corpus.js";
-import { answerQuestion } from "../core/faq.js";
+import { answerQuestion, faqAuditKind } from "../core/faq.js";
 import { MockLlm } from "../core/llm.js";
 import { scanCorpus } from "../core/contradictions.js";
 import { Community, scan, draftOutreachForFlags, type RadarEvent } from "../core/radar.js";
@@ -45,8 +45,11 @@ async function main() {
   ];
   for (const q of questions) {
     const result = await answerQuestion(q, corpus, llm, { conflicts: findings });
-    audit.record(result.decision === "answered" ? "faq.answered" : "faq.escalated", q, {
+    // Tri-state audit: a conflicted question is recorded as faq.conflicted,
+    // never folded into faq.escalated — the report counts them separately.
+    audit.record(faqAuditKind(result), q, {
       citations: result.citations?.map((c) => c.docId),
+      conflict: result.conflict?.pair,
       alerts: result.alerts?.length,
       reasons: result.escalation?.reasons,
     });

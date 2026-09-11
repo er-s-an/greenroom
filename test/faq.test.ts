@@ -116,6 +116,21 @@ describe("faq pipeline", () => {
     expect(result.escalation?.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
   });
 
+  it("blocks a flipped sentence hiding inside a merged citation claim (full pipeline)", async () => {
+    // The standalone 'never mandatory' sentence is caught; merging it with a
+    // faithful sentence must not lower containment enough to skip the guard.
+    const merger = new MockLlm();
+    merger.draftAnswer = async () => {
+      const text =
+        "Joining our Discord server is never mandatory for all participants. Once you join, introduce yourself and share your country.";
+      return { text, citations: [{ claim: text, docId: "participation.discord" }] };
+    };
+    const result = await answerQuestion("Do I have to join Discord?", corpus, merger);
+    expect(result.decision).toBe("escalated");
+    expect(result.answer).toBeUndefined();
+    expect(result.escalation?.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
   it("repairs a gate-rejected draft once instead of escalating", async () => {
     // First draft has an uncited sentence; with gate feedback the provider fixes it.
     let calls = 0;
@@ -152,6 +167,35 @@ describe("faq pipeline", () => {
     const result = await answerQuestion("what is the wifi password at the venue?", corpus, llm);
     expect(result.decision).toBe("escalated");
     expect(result.escalation?.routeTo).toMatch(/osconnect|forum/i);
+  });
+});
+
+describe("faq relevance regressions (mock provider)", () => {
+  it("deadline smoke cites ONLY this event's deadline — no sponsor dates leak in", async () => {
+    const result = await answerQuestion("when exactly is the submission deadline?", corpus, llm);
+    expect(result.decision).toBe("answered");
+    expect(result.answer).toMatch(/15 September|Sep 15/);
+    expect(result.answer).not.toMatch(/algoverse|august 23|11:59/i);
+    expect(result.citations?.length).toBeGreaterThan(0);
+    expect(result.citations?.every((c) => c.docId.startsWith("dates."))).toBe(true);
+  });
+
+  it("direct question: registration opening answers with the exact date", async () => {
+    const result = await answerQuestion("When does registration open?", corpus, llm);
+    expect(result.decision).toBe("answered");
+    expect(result.answer).toMatch(/16 June 2026/);
+  });
+
+  it("paraphrased question still lands on the right sentence", async () => {
+    const result = await answerQuestion("how much time do participants have to design and build?", corpus, llm);
+    expect(result.decision).toBe("answered");
+    expect(result.answer).toMatch(/25 days/);
+  });
+
+  it("ambiguous question with no real source escalates instead of free-associating", async () => {
+    const result = await answerQuestion("who won last year's hackathon?", corpus, llm);
+    expect(result.decision).toBe("escalated");
+    expect(result.answer).toBeUndefined();
   });
 });
 

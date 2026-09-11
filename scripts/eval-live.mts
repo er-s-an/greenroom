@@ -3,28 +3,12 @@
  * Not part of vitest — hits the network and costs quota.
  * Run: pnpm tsx scripts/eval-live.mts
  */
-import { execSync } from "node:child_process";
-import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { loadCorpus } from "../src/core/corpus.js";
 import { answerQuestion } from "../src/core/faq.js";
 import { KimiLlm } from "../src/core/llm.js";
 import { scanCorpus } from "../src/core/contradictions.js";
-
-function gitSha(): string {
-  try {
-    return execSync("git rev-parse --short HEAD").toString().trim();
-  } catch {
-    return "unknown";
-  }
-}
-
-function corpusHash(): string {
-  const h = createHash("sha256");
-  h.update(readFileSync("data/corpus/ai-builders-hackathon-2026.json"));
-  h.update(readFileSync("data/corpus/contradictions.verified.json"));
-  return h.digest("hex").slice(0, 16);
-}
+import { artifactMeta } from "./artifact-meta.mjs";
 
 interface Case {
   q: string;
@@ -144,14 +128,13 @@ async function main() {
     for (const e of overEscalations) console.log(`  ${e}`);
   }
 
-  // Machine-readable evidence: provider, model, timing, git SHA, corpus hash.
+  // Machine-readable evidence: provider, model, timing, code/corpus provenance.
   const artifact = {
     suite: "greenroom-kimi-live-eval",
     at: new Date().toISOString(),
     provider: llm.name,
     model: "kimi-for-coding",
-    gitSha: gitSha(),
-    corpusHash: corpusHash(),
+    ...artifactMeta(),
     passed: pass,
     total: CASES.length,
     cases: caseResults,

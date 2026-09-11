@@ -16,8 +16,8 @@ Greenroom is the middle ground: an operator that is **powerful because it is con
 
 ## The three gates
 
-1. **Citation Gate** — every sentence of an answer must cite a retrieved official document, stay inside its vocabulary (containment check), and may not flip or drop the source's negation, exclusion, modal (must/may/only) or numeric content. Low confidence or a failed check → deterministic escalation to a human, with a suggested route. Greenroom also refuses to act on stale information (e.g. it will not invite people to apply for a program whose deadline has passed).
-2. **Approval Gate** — the copilot *drafts* outreach (a nudge to a stalled participant), but nothing is ever sent until a human organizer clicks approve in the queue. A failed send never strands a draft: it lands in `send_failed` and can be retried.
+1. **Citation Gate** — every sentence of an answer must cite a retrieved official document and stay inside its vocabulary (containment check). Every claim *sentence* is anchored to a single source sentence on its own and may not flip or drop the source's negation, exclusion, modal (must/may/only) or numeric content — so a flipped sentence cannot hide inside a merged citation claim. Low confidence or a failed check → deterministic escalation to a human, with a suggested route. Greenroom also refuses to act on stale information (e.g. it will not invite people to apply for a program whose deadline has passed).
+2. **Approval Gate** — the copilot *drafts* outreach (a nudge to a stalled participant), but nothing is ever sent until a human organizer clicks approve in the queue. A failed send never strands a draft: it lands in `send_failed` and can be retried. Approvals are snapshotted write-ahead (before *and* after every send); a draft caught in the crash window between a real send and its snapshot comes back loudly marked `send_failed` ("outcome unknown — verify before retrying"), never silently resent.
 3. **Audit Trail** — every answer, refusal, draft, approval, rejection, and send is recorded.
 
 And when the official sources themselves disagree on the fact being asked, Greenroom **fails closed**: no verdict — the participant sees both conflicting sources verbatim, marked as a human-verified conflict, plus the route to a human organizer.
@@ -60,7 +60,7 @@ Requires Node ≥ 20 and pnpm ≥ 9.
 
 ```bash
 pnpm install
-pnpm test          # 59 unit tests: gate (incl. polarity adversarial), pipeline, radar, approvals, persistence, generalization
+pnpm test          # 73 unit tests: gate (incl. polarity + merged-claim adversarial), pipeline, radar, approvals, persistence, generalization
 pnpm sim "Can companies participate?" "when is the deadline?"
 pnpm sim:radar     # full radar → draft → approve → audit loop on the seed community
 pnpm sim:report    # ends in a sponsor report computed from current state
@@ -71,15 +71,15 @@ Hosted LLM (optional): set `KIMI_CODE_API_KEY` + `LLM=kimi` (uses Kimi K2.7 via 
 
 Modes: by default the server runs an explicit **synthetic replay** (12 synthetic members, fixed demo clock, demo sender — labeled in the UI). `GREENROOM_MODE=live` switches to the wall clock; the deadline is configurable via `GREENROOM_DEADLINE`.
 
-More checks: `pnpm e2e` (real-browser UI smoke test; needs Playwright — `pnpm add -D playwright` or point `PLAYWRIGHT_REQUIRE_ROOT` at an existing install) and `pnpm eval:live` (hosted-Kimi adversarial eval; costs API quota). Both write machine-readable artifacts to `e2e-results/` and `eval-results/`.
+More checks: `pnpm e2e` (real-browser UI smoke test; Playwright is a locked devDependency — it drives system Chrome, or `pnpm exec playwright install chromium` for the bundled browser) and `pnpm eval:live` (hosted-Kimi adversarial eval; costs API quota). Both write machine-readable artifacts to `e2e-results/` and `eval-results/`, each recording the git SHA, a hash of the full source tree, the corpus hash, and the Node/pnpm/Playwright versions — recompute `sourceHash` at HEAD to verify the evidence belongs to this exact code.
 
 ## Quality evidence
 
-- **Live adversarial eval** (`pnpm eval:live`, artifact in `eval-results/` with provider/model/date/git SHA/corpus hash): 23 real-user-style questions against hosted Kimi K2.7 — paraphrases, typos, a non-English question, stale-deadline traps, fabrication bait, off-topic. Every on-topic question answered with valid citations; every unanswerable one escalated; the stale deadline always acknowledged; the verified eligibility conflict fails closed instead of shipping a one-sided verdict.
-- **Polarity adversarial suite** (`test/gate.test.ts`): not/never flips, dropped negations, must↔may swaps, dropped geographic exclusions, number and date swaps — all blocked; faithful readings of the same sentences all pass.
+- **Live adversarial eval** (`pnpm eval:live`, artifact in `eval-results/` with provider/model/date/source-tree hash/corpus hash/tool versions): 23 real-user-style questions against hosted Kimi K2.7 — paraphrases, typos, a non-English question, stale-deadline traps, fabrication bait, off-topic. Every on-topic question answered with valid citations; every unanswerable one escalated; the stale deadline always acknowledged; the verified eligibility conflict fails closed instead of shipping a one-sided verdict.
+- **Polarity adversarial suite** (`test/gate.test.ts`): not/never flips, dropped negations, must↔may swaps, dropped geographic exclusions, number and date swaps — all blocked, **including when the violating sentence is merged with a faithful sentence into one citation claim**; faithful readings of the same sentences all pass.
 - **Repair loop**: when the gate rejects a draft, the LLM gets one retry with the gate's exact rejection reasons before a human is bothered. Wording problems get fixed; fabrications still escalate.
 - **Generalization**: `test/generalize.test.ts` runs the identical pipeline on a second hackathon's official rules (Nebius × NVIDIA) with zero tuning — including the same eligibility question, which correctly gets the *opposite* answer (that event welcomes companies).
-- **Persistence**: community events are appended to JSONL (replayed on boot), the audit trail is an append-only JSONL log, and approvals snapshot atomically (tmp + rename) on every mutation — approve, reject, and retry included. Restart the server — nothing is lost and no decided draft comes back as pending.
+- **Persistence**: community events are appended to JSONL (replayed on boot), the audit trail is an append-only JSONL log, and approvals snapshot atomically (tmp + rename) on every mutation — plus write-ahead snapshots around every send. Restart the server — nothing is lost, no decided draft comes back as pending, and a draft caught mid-send by a crash is flagged `send_failed` rather than resent blindly.
 - **UI smoke test**: `pnpm e2e` boots the real server and drives the dashboard in a real browser — fail-closed money moment, escalation, approval → simulated send, audit, report.
 
 ## Privacy stance
@@ -88,4 +88,4 @@ The radar uses only public-channel metadata (joins, introduction posts, message 
 
 ## Status
 
-Built in September 2026 for the AI Builders Hackathon. Core engine (corpus, citation gate with polarity guard, contradiction radar with verified/candidate separation, stall radar, approval queue with send-failure recovery, audit, sponsor report), the Fastify server, and the React dashboard are implemented and tested (59 unit tests + a 13-check real-browser smoke test). The Discord adapter is implemented but not yet verified against a live guild; the demo runs against an explicitly labeled synthetic replay.
+Built in September 2026 for the AI Builders Hackathon. Core engine (corpus, citation gate with per-sentence polarity guard, contradiction radar with verified/candidate separation, stall radar, approval queue with send-failure recovery and write-ahead persistence, audit, sponsor report), the Fastify server, and the React dashboard are implemented and tested (73 unit tests + a 13-check real-browser smoke test). The Discord adapter is implemented but not yet verified against a live guild; the demo runs against an explicitly labeled synthetic replay.

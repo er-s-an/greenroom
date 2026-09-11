@@ -77,13 +77,33 @@ export class MockLlm implements LlmProvider {
     docs.forEach((doc, rank) => {
       for (const sentence of splitSentences(doc.body)) {
         if (sentence.startsWith("NOTE:")) continue; // handled below
+        if (/:\s*(\d+\.)?$/.test(sentence)) continue; // list lead-in fragment, not an answer
         const score = overlapScore(qTokens, sentence);
         if (score > 0) picked.push({ sentence, docId: doc.id, score, rank });
       }
     });
 
     picked.sort((a, b) => b.score - a.score || a.rank - b.rank);
-    const chosen = picked.slice(0, 4);
+    // Relevance floor: a picked sentence must cover a real share of the
+    // question. Without it, same-keyword irrelevancies ride along — a
+    // sponsor's passed application deadline next to the event's submission
+    // deadline, and its stale NOTE with it.
+    const floor = Math.min(0.5, 2 / Math.max(qTokens.size, 1));
+    let chosen = picked.filter((p) => p.score >= floor).slice(0, 4);
+    if (chosen.length === 0 && picked.length > 0) {
+      // No single sentence covers the question, but the top-ranked document
+      // may still cover it as a whole (title/tags/topic match). Serve that
+      // document's best lines — and only then; a document that covers less
+      // than half the question's content tokens is not about it.
+      const topRank = Math.min(...picked.map((p) => p.rank));
+      const topDoc = docs[topRank]!;
+      const docTokens = new Set(tokenize(`${topDoc.title} ${topDoc.body} ${topDoc.tags.join(" ")}`));
+      let docHits = 0;
+      for (const t of qTokens) if (docTokens.has(t)) docHits++;
+      if (docHits / qTokens.size >= 0.5) {
+        chosen = picked.filter((p) => p.rank === topRank).slice(0, 2);
+      }
+    }
 
     // Freshness: any cited doc carrying a staleness NOTE must surface it.
     for (const doc of docs) {

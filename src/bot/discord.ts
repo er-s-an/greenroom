@@ -6,7 +6,7 @@ import {
   type TextChannel,
 } from "discord.js";
 import type { Corpus, ContradictionFinding } from "../core/types.js";
-import { answerQuestion } from "../core/faq.js";
+import { answerQuestion, faqAuditKind } from "../core/faq.js";
 import type { LlmProvider } from "../core/llm.js";
 import { Community, scan, draftOutreachForFlags } from "../core/radar.js";
 import type { ApprovalQueue } from "../core/approvals.js";
@@ -108,22 +108,49 @@ export async function startBot(deps: BotDeps): Promise<Client> {
       conflicts: deps.conflicts,
     });
 
-    if (result.decision === "answered") {
-      const citeLines = (result.citations ?? [])
-        .map((c) => `• ${c.docId}${c.url ? ` — ${c.url}` : ""}`)
-        .join("\n");
-      await message.reply(`${result.answer}\n\n_sources:_\n${citeLines}`);
-      deps.audit.record("faq.answered", `@${message.author.tag}: ${question}`, result);
-    } else {
-      await message.reply(
-        "I don't have a reliable official source for that, so I've flagged it for a human organizer instead of guessing.",
-      );
-      deps.audit.record("faq.escalated", `@${message.author.tag}: ${question}`, result.escalation);
-      const org = await findChannelByName(client, organizerChannelName);
-      await org?.send(
-        `**Escalation** from @${message.author.tag}: "${question}"\nreasons: ${(result.escalation?.reasons ?? []).join("; ")}\nroute: ${result.escalation?.routeTo}`,
-      );
+    // Explicit tri-state: a conflicted question gets both official excerpts
+    // and the human route — never a one-sided verdict, never logged as an
+    // ordinary escalation.
+    switch (result.decision) {
+      case "answered": {
+        const citeLines = (result.citations ?? [])
+          .map((c) => `• ${c.docId}${c.url ? ` — ${c.url}` : ""}`)
+          .join("\n");
+        await message.reply(`${result.answer}\n\n_sources:_\n${citeLines}`);
+        break;
+      }
+      case "conflicted": {
+        const c = result.conflict!;
+        await message.reply(
+          `**Official sources conflict on this** (verified by a human), so I won't guess.\n` +
+            `• ${c.sources[0].title}: "${c.sources[0].excerpt}"\n` +
+            `• ${c.sources[1].title}: "${c.sources[1].excerpt}"\n` +
+            `A human organizer decides this one — ${c.routeTo}`,
+        );
+        const org = await findChannelByName(client, organizerChannelName);
+        await org?.send(
+          `**Conflicted question** from @${message.author.tag}: "${question}"\n` +
+            `${c.pair.join(" × ")} [${c.severity}, verified] — both sources were shown; routed to a human.`,
+        );
+        break;
+      }
+      case "escalated": {
+        await message.reply(
+          "I don't have a reliable official source for that, so I've flagged it for a human organizer instead of guessing.",
+        );
+        const org = await findChannelByName(client, organizerChannelName);
+        await org?.send(
+          `**Escalation** from @${message.author.tag}: "${question}"\nreasons: ${(result.escalation?.reasons ?? []).join("; ")}\nroute: ${result.escalation?.routeTo}`,
+        );
+        break;
+      }
     }
+    deps.audit.record(faqAuditKind(result), `@${message.author.tag}: ${question}`, {
+      citations: result.citations?.map((c) => c.docId),
+      conflict: result.conflict?.pair,
+      alerts: result.alerts?.length ?? 0,
+      reasons: result.escalation?.reasons,
+    });
 
     for (const alert of result.alerts ?? []) {
       const org = await findChannelByName(client, organizerChannelName);
@@ -149,10 +176,13 @@ export async function startBot(deps: BotDeps): Promise<Client> {
 /**
  * The send function the approval gate uses in a live deployment:
  * approved drafts become Discord DMs. (memberId = Discord user id.)
+ * The Discord message id is returned as the receipt so the audit trail and
+ * the persisted draft carry a provider reference.
  */
 export function discordDmSender(client: Client) {
   return async (draft: { memberId: string; text: string }) => {
     const user = await client.users.fetch(draft.memberId);
-    await user.send(draft.text);
+    const message = await user.send(draft.text);
+    return { simulated: false, reference: message.id };
   };
 }

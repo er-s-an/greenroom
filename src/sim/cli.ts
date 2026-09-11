@@ -28,20 +28,39 @@ async function main() {
   for (const q of questions) {
     const result = await answerQuestion(q, corpus, llm, { conflicts: findings });
     console.log(`\nQ: ${q}`);
-    if (result.decision === "answered") {
-      audit.record("faq.answered", q, result);
-      console.log(`A: ${result.answer}`);
-      for (const c of result.citations ?? []) {
-        console.log(`   [${c.docId}] ${c.url ?? ""}`);
+    switch (result.decision) {
+      case "answered": {
+        audit.record("faq.answered", q, result);
+        console.log(`A: ${result.answer}`);
+        const seen = new Set<string>();
+        for (const c of result.citations ?? []) {
+          if (seen.has(c.docId)) continue;
+          seen.add(c.docId);
+          console.log(`   [${c.docId}] ${c.url ?? ""}`);
+        }
+        for (const alert of result.alerts ?? []) {
+          console.log(`   ⚑ ORGANIZER ALERT [${alert.severity}] documentation conflict: ${alert.pair.join(" × ")}`);
+          console.log(`     ${alert.explanation}`);
+        }
+        break;
       }
-      for (const alert of result.alerts ?? []) {
-        console.log(`   ⚑ ORGANIZER ALERT [${alert.severity}] documentation conflict: ${alert.pair.join(" × ")}`);
-        console.log(`     ${alert.explanation}`);
+      case "conflicted": {
+        const c = result.conflict!;
+        audit.record("faq.conflicted", q, { pair: c.pair, severity: c.severity });
+        console.log(`CONFLICTED [${c.severity}, human-verified] — no one-sided answer given`);
+        for (const s of c.sources) {
+          console.log(`   [${s.docId}] ${s.url ?? ""}`);
+          console.log(`     “${s.excerpt}”`);
+        }
+        console.log(`   → human route: ${c.routeTo}`);
+        break;
       }
-    } else {
-      audit.record("faq.escalated", q, result.escalation);
-      console.log(`ESCALATED → ${result.escalation?.routeTo}`);
-      for (const r of result.escalation?.reasons ?? []) console.log(`   reason: ${r}`);
+      case "escalated": {
+        audit.record("faq.escalated", q, result.escalation);
+        console.log(`ESCALATED → ${result.escalation?.routeTo}`);
+        for (const r of result.escalation?.reasons ?? []) console.log(`   reason: ${r}`);
+        break;
+      }
     }
   }
 

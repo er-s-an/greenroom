@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import Fastify from "fastify";
 import fastifyStatic from "@fastify/static";
 import { loadCorpus } from "../core/corpus.js";
-import { answerQuestion, type FaqResult } from "../core/faq.js";
+import { answerQuestion, faqAuditKind, type FaqResult } from "../core/faq.js";
 import { KimiLlm, MockLlm, type LlmProvider } from "../core/llm.js";
 import { scanCorpus } from "../core/contradictions.js";
 import type { ContradictionFinding } from "../core/types.js";
@@ -14,7 +14,7 @@ import {
   scan,
   type RadarEvent,
 } from "../core/radar.js";
-import { ApprovalQueue, type OutreachDraft } from "../core/approvals.js";
+import { ApprovalQueue, recoverUnknownDeliveries, type OutreachDraft } from "../core/approvals.js";
 import { AuditLog } from "../core/audit.js";
 import { generateReport } from "../core/report.js";
 import { FileStore } from "./store.js";
@@ -71,13 +71,17 @@ const hasRecordedFindings = audit.list().some((e) => e.kind === "contradiction.f
 
 // Demo sender: records a receipt but delivers nothing. The `simulated` status
 // is deliberate — the UI and audit trail must never imply a real Discord DM.
+// persistDrafts is the write-ahead hook: the queue snapshots before and after
+// every send, so a crash mid-send restores a loudly-flagged send_failed, not
+// a silent pending resend.
 const queue = new ApprovalQueue(
   {
     send: (draft) => ({ simulated: true, reference: `sim:${draft.id}@${new Date(now).toISOString()}` }),
     audit,
     now: () => now,
+    persist: () => persistDrafts(),
   },
-  store.loadApprovals(),
+  recoverUnknownDeliveries(store.loadApprovals()),
 );
 const persistDrafts = () => store.saveApprovals(queue.all());
 
@@ -198,13 +202,7 @@ app.post("/api/ask", async (req, reply) => {
   const result: FaqResult = await answerQuestion(body.question, corpus, llm, {
     conflicts: findings,
   });
-  const kind =
-    result.decision === "answered"
-      ? ("faq.answered" as const)
-      : result.decision === "conflicted"
-        ? ("faq.conflicted" as const)
-        : ("faq.escalated" as const);
-  audit.record(kind, result.question, {
+  audit.record(faqAuditKind(result), result.question, {
     citations: result.citations?.map((c) => c.docId),
     conflict: result.conflict?.pair,
     alerts: result.alerts?.length ?? 0,

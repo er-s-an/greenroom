@@ -44,6 +44,14 @@ describe("sponsor report", () => {
     expect(md).toContain("Sent (real sender): 1");
   });
 
+  it("counts conflicted questions separately from escalations", () => {
+    const { community, audit } = fixture();
+    audit.record("faq.conflicted", "q4", { pair: ["eligibility.rules_text", "eligibility.structured"] });
+    const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE, mode: "live" });
+    expect(md).toContain("Refused on a verified doc conflict: 1");
+    expect(md).toContain("Escalated to humans (no reliable source): 1");
+  });
+
   it("marks synthetic replay numbers as demo data", () => {
     const { community, audit } = fixture();
     const md = generateReport({ community, audit, corpus, now: NOW, deadlineAt: DEADLINE, mode: "synthetic-replay" });

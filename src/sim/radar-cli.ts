@@ -20,10 +20,13 @@ for (const e of seed.events) {
 }
 
 const audit = new AuditLog();
-const sent: { handle: string; text: string }[] = [];
+// Demo sender: delivers nothing, and must say so. A void return here would be
+// recorded as a real `sent` — the sim never claims a message left the machine.
+const simulatedDeliveries: { handle: string; text: string }[] = [];
 const queue = new ApprovalQueue({
   send: (draft) => {
-    sent.push({ handle: draft.handle, text: draft.text });
+    simulatedDeliveries.push({ handle: draft.handle, text: draft.text });
+    return { simulated: true, reference: `sim:${draft.id}` };
   },
   audit,
   now: () => now,
@@ -61,7 +64,7 @@ async function main() {
   console.log("\n== organizer approves the first draft ==");
   const first = draftIds[0]!;
   await queue.approve(first, "organizer-demo");
-  console.log(`  sent: "${sent[0]?.text}"`);
+  console.log(`  simulated delivery (nothing left this machine): "${simulatedDeliveries[0]?.text}"`);
   console.log(`  still pending: ${queue.pending().length}`);
 
   console.log(`\n== audit trail ==`);
