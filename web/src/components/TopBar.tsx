@@ -19,20 +19,27 @@ export function TopBar({ state }: { state: StateResponse | null }) {
       ? (new Date(state.deadline).getTime() - new Date(state.now).getTime()) / 3_600_000
       : null;
   const label = hours !== null ? `${Math.max(0, Math.round(hours))}h to deadline` : "—";
+  // The mock provider is a test double — the UI must never let it pass for a hosted model.
+  const provider = state?.provider?.includes("mock")
+    ? "mock llm (test double)"
+    : state?.provider?.includes("kimi")
+      ? "Kimi (hosted)"
+      : (state?.provider ?? "…");
 
   return (
     <header className="topbar">
-      <div className="wordmark">
-        <HouseLight />
-        Greenroom
+      <div className="brand-lockup">
+        <div className="wordmark">
+          <HouseLight />
+          Greenroom
+        </div>
+        <span className="brand-sub">permissioned community operations</span>
       </div>
       <div className="topbar-meta">
-        {state?.synthetic && (
-          <span className="chip chip-replay" title="Demo mode: 12 synthetic members, fixed demo clock, demo sender. Nothing here is live event data.">
-            Synthetic replay
-          </span>
-        )}
-        <span className="chip chip-event">{state?.event ?? "…"}</span>
+        <span className="event-context">{state?.event ?? "loading event…"}</span>
+        <span className="chip chip-truth">Curated official corpus</span>
+        {state?.synthetic && <span className="chip chip-replay">Synthetic community</span>}
+        <span className="chip chip-truth">No live Discord send</span>
         <span className={`chip ${hours !== null && hours < 72 ? "chip-amber" : "chip-green"}`}>
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
@@ -47,7 +54,7 @@ export function TopBar({ state }: { state: StateResponse | null }) {
             </motion.span>
           </AnimatePresence>
         </span>
-        <span className="chip chip-provider">llm: {state?.provider ?? "…"}</span>
+        <span className="chip chip-provider">AI: {provider}</span>
       </div>
     </header>
   );

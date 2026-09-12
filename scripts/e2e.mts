@@ -79,19 +79,20 @@ async function main() {
   await page.goto(BASE, { waitUntil: "networkidle" });
   await page.waitForTimeout(1200);
 
-  check("dashboard loads with funnel", await page.getByText("Stall radar").first().isVisible());
-  check("synthetic replay chip is visible", await page.getByText(/synthetic replay/i).first().isVisible());
+  check("hero workbench loads before the secondary radar", await page.getByText(/Asha has one question/i).first().isVisible());
+  check("synthetic community truth chip is visible", await page.getByText(/synthetic community/i).first().isVisible());
   check(
     "verified conflict listed in Doc conflicts panel",
     await page.getByText(/eligibility\.rules_text × eligibility\.structured/).first().isVisible(),
   );
 
   // money moment: fail-closed on the verified eligibility conflict
-  await page.getByText("Can companies participate?").first().click();
+  await page.getByRole("button", { name: /run source check/i }).click();
   await page.waitForTimeout(2500);
   check(
-    "fail-closed card appears (no one-sided verdict)",
-    await page.getByText(/Official sources conflict/i).first().isVisible(),
+    "model draft is withheld with no one-sided verdict",
+    (await page.getByText(/Two official sources\. No safe verdict/i).count()) > 0 &&
+      (await page.getByText(/withheld · unsent/i).count()) > 0,
   );
   check(
     "both conflicting excerpts shown verbatim",
@@ -99,9 +100,9 @@ async function main() {
       (await page.getByText(/Startup founders and entrepreneurs/).count()) > 0,
   );
   check(
-    "conflict marked human-verified with a human route",
-    (await page.getByText(/verified by a human/i).count()) > 0 &&
-      (await page.getByText(/routes this to a human/i).count()) > 0,
+    "conflict marked with its review provenance plus a human route",
+    (await page.getByText(/human review during corpus curation/i).count()) > 0 &&
+      (await page.getByText(/Saved organizer contact/i).count()) > 0,
   );
 
   // escalation path

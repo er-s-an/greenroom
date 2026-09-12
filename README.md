@@ -1,91 +1,88 @@
 # Greenroom
 
-**The AI copilot for hackathon and community organizers — with gates.**
+**Let AI draft. Keep the decision accountable.**
 
-Every answer needs a citation. Every outreach needs an approval. Every action leaves a trail.
+Greenroom is a source-checked copilot for community and hackathon organizers. It retrieves official material, drafts a reply, checks its claims, and holds the draft when an existing reviewed issue still needs a human decision.
 
-Greenroom watches an online community (a hackathon Discord, an open-source program, a course cohort), answers participant questions *only* when it can cite an official source, spots people who are silently dropping out, and drafts organizer-approved nudges — all under deterministic guardrails, so it can be trusted with a community of thousands.
+At 2:07 AM, Asha receives a question: **“Can our company enter?”** She is a synthetic volunteer-organizer persona; the consequence is easy to recognize. A team may treat one confident answer as permission to spend days building. Greenroom makes the draft, its sources and the reason for holding it visible together.
 
-Built for the [AI Builders Hackathon 2026](https://ai-builders-hackathon-2026.devpost.com/). Submission deck: [`docs/greenroom-deck.pdf`](docs/greenroom-deck.pdf) (10 pages, source: `docs/deck.html`).
+[Ten-page deck](docs/greenroom-deck.pdf) · [Editable deck](docs/deck.html) · [Demo walkthrough](docs/demo.md) · [Hosted-run evidence](docs/evidence/hosted-hero.md)
 
-## Why
+Built for the [AI Builders Hackathon 2026](https://ai-builders-hackathon-2026.devpost.com/).
 
-This hackathon has **3,000+ participants and one Discord server**. Organizers answer the same question for the eleventh time at 2am; people register and never introduce themselves; sponsors ask for engagement reports nobody has time to compile. Existing community tools are analytics dashboards — they show you the problem but don't act on it. Generic chatbots act, but can't be trusted not to hallucinate rules to a confused participant.
+## One question, one accountable outcome
 
-Greenroom is the middle ground: an operator that is **powerful because it is constrained**.
+The demo uses a curated September 10, 2026 snapshot of public event material. Rules prose includes startup founders; structured eligibility says students only and excludes companies. A founder and a company are not necessarily the same thing. A human registered this issue for clarification during corpus review.
 
-## The three gates
+1. The organizer asks `can companies participate??`.
+2. BM25 retrieval selects relevant official source text.
+3. Kimi drafts a source-cited sentence.
+4. Deterministic checks examine the wording and the existing human-reviewed issue registry.
+5. Greenroom withholds the draft, shows both source excerpts and the saved organizer contact, and records `faq.conflicted`.
 
-1. **Citation Gate** — every sentence of an answer must cite a retrieved official document and stay inside its vocabulary (containment check). Every claim *sentence* is anchored to a single source sentence on its own and may not flip or drop the source's negation, exclusion, modal (must/may/only) or numeric content — so a flipped sentence cannot hide inside a merged citation claim. Low confidence or a failed check → deterministic escalation to a human, with a suggested route. Greenroom also refuses to act on stale information (e.g. it will not invite people to apply for a program whose deadline has passed).
-2. **Approval Gate** — the copilot *drafts* outreach (a nudge to a stalled participant), but nothing is ever sent until a human organizer clicks approve in the queue. A failed send never strands a draft: it lands in `send_failed` and can be retried. Approvals are snapshotted write-ahead (before *and* after every send); a draft caught in the crash window between a real send and its snapshot comes back loudly marked `send_failed` ("outcome unknown — verify before retrying"), never silently resent.
-3. **Audit Trail** — every answer, refusal, draft, approval, rejection, and send is recorded.
+The contact is displayed for investigation. No case is automatically assigned and no person is notified. The question remains open; an unsupported final ruling stays unsent.
 
-And when the official sources themselves disagree on the fact being asked, Greenroom **fails closed**: no verdict — the participant sees both conflicting sources verbatim, marked as a human-verified conflict, plus the route to a human organizer.
+## What runs today
 
-## Features
+- **FAQ workbench:** retrieval → draft → citation/source checks → answer, escalation or held draft. The organizer can inspect the draft and source pair.
+- **Reviewed-issue gate:** a detector may propose candidates; the human-reviewed registry determines which high-severity issues block a reply. The showcased issue was registered by a human. Unknown-conflict discovery accuracy is unmeasured.
+- **Secondary local workflow:** a participant lifecycle model identifies stalled synthetic participants, drafts outreach into an approval queue, and records approval, rejection and simulated delivery.
+- **Audit and report:** file-backed event history and approval snapshots support an inspectable trail and a deterministic sponsor report.
+- **Discord adapter:** implemented separately, but not composed into the demonstrated workbench or verified against a live guild.
 
-- **Grounded FAQ** — answers rules/logistics questions in Discord with per-sentence citations to the official docs.
-- **Contradiction radar** — compares official documents within a topic; a detector proposes candidates, a human-verified registry disposes. Verified high-severity conflicts fail closed in the FAQ; unverified candidates wait in a review queue and never reach participants. (In this hackathon's own published rules, Greenroom surfaces a real, human-verified conflict: the prose welcomes startup founders while the structured eligibility settings say students-only and exclude companies.)
-- **Stall radar** — participant lifecycle state machine (`registered → joined → introduced → active → submitted`); flags who is stuck where, and drafts a contextual nudge for each — into the approval queue, never directly to Discord.
-- **Sponsor report** — one click generates the engagement report sponsors ask for, computed deterministically from the audit trail and community state.
+**AI produces drafts. Deterministic gates control whether those drafts may become answers.** Swapping providers does not bypass the gates.
 
-## Architecture
+## Run locally
 
-```
-src/
-  core/           pure logic, zero I/O, fully unit-tested offline
-    corpus.ts       knowledge docs with source anchors
-    retrieve.ts     BM25 retrieval over the curated corpus
-    gate.ts         citation gate: citation + containment + polarity/number guard
-    faq.ts          the answer pipeline: retrieve → draft → gate → answer, escalate, or fail closed
-    contradictions.ts  doc-conflict scanner (detector proposes, human registry disposes)
-    radar.ts        participant state machine + deterministic stall detection
-    approvals.ts    the approval queue (send function injected; nothing sends itself)
-    audit.ts        append-only audit trail
-    llm.ts          pluggable LLM: deterministic offline mock ⇄ Kimi K2.7 (hosted)
-  sim/            CLI simulators: FAQ + full radar/approval/audit loop
-  bot/            Discord adapter (discord.js) — implemented, not yet verified against a live guild
-  server/         Fastify API + file-backed persistence (JSONL event sourcing)
-  web/            organizer dashboard (React)
-data/
-  corpus/         curated knowledge base, quoted verbatim from official sources
-  seed/           synthetic replica community (no real people) for demos
-```
-
-Design rule: **all decisions are deterministic and tested; the LLM only writes wording.** Swapping LLM providers cannot change what the copilot is allowed to do.
-
-## Quickstart
-
-Requires Node ≥ 20 and pnpm ≥ 9.
+Requires Node 20 or newer and pnpm 9 or newer.
 
 ```bash
 pnpm install
-pnpm test          # 73 unit tests: gate (incl. polarity + merged-claim adversarial), pipeline, radar, approvals, persistence, generalization
-pnpm sim "Can companies participate?" "when is the deadline?"
-pnpm sim:radar     # full radar → draft → approve → audit loop on the seed community
-pnpm sim:report    # ends in a sponsor report computed from current state
-pnpm build && pnpm dev   # dashboard + API on http://localhost:3000
+pnpm test
+pnpm typecheck
+pnpm build
+pnpm dev
 ```
 
-Hosted LLM (optional): set `KIMI_CODE_API_KEY` + `LLM=kimi` (uses Kimi K2.7 via the OpenAI-compatible `https://api.kimi.com/coding/v1` endpoint). Without a key, everything runs on the deterministic offline mock — including the demo.
+Open `http://localhost:3000` and click **Run source check** for the prefilled question. With no provider configured, this is an explicitly labeled offline test double. The community, persona and sender are synthetic.
 
-Modes: by default the server runs an explicit **synthetic replay** (12 synthetic members, fixed demo clock, demo sender — labeled in the UI). `GREENROOM_MODE=live` switches to the wall clock; the deadline is configurable via `GREENROOM_DEADLINE`.
+For optional hosted drafting, configure `KIMI_CODE_API_KEY` securely in your local environment, then run `LLM=kimi pnpm dev`. The adapter uses the configured Kimi endpoint and the `kimi-for-coding` model alias. Startup candidate generation and FAQ requests consume provider quota. Never place credentials in tracked files or recordings. A hosted call is not needed to run the offline tests or inspect the submitted evidence.
 
-More checks: `pnpm e2e` (real-browser UI smoke test; Playwright is a locked devDependency — it drives system Chrome, or `pnpm exec playwright install chromium` for the bundled browser) and `pnpm eval:live` (hosted-Kimi adversarial eval; costs API quota). Both write machine-readable artifacts to `e2e-results/` and `eval-results/`, each recording the git SHA, a hash of the full source tree, the corpus hash, and the Node/pnpm/Playwright versions — recompute `sourceHash` at HEAD to verify the evidence belongs to this exact code.
+`GREENROOM_MODE=live` changes the clock and deadline only. It does not connect a Discord bot or replace the synthetic seed.
 
-## Quality evidence
+## Architecture
 
-- **Live adversarial eval** (`pnpm eval:live`, artifact in `eval-results/` with provider/model/date/source-tree hash/corpus hash/tool versions): 23 real-user-style questions against hosted Kimi K2.7 — paraphrases, typos, a non-English question, stale-deadline traps, fabrication bait, off-topic. Every on-topic question answered with valid citations; every unanswerable one escalated; the stale deadline always acknowledged; the verified eligibility conflict fails closed instead of shipping a one-sided verdict.
-- **Polarity adversarial suite** (`test/gate.test.ts`): not/never flips, dropped negations, must↔may swaps, dropped geographic exclusions, number and date swaps — all blocked, **including when the violating sentence is merged with a faithful sentence into one citation claim**; faithful readings of the same sentences all pass.
-- **Repair loop**: when the gate rejects a draft, the LLM gets one retry with the gate's exact rejection reasons before a human is bothered. Wording problems get fixed; fabrications still escalate.
-- **Generalization**: `test/generalize.test.ts` runs the identical pipeline on a second hackathon's official rules (Nebius × NVIDIA) with zero tuning — including the same eligibility question, which correctly gets the *opposite* answer (that event welcomes companies).
-- **Persistence**: community events are appended to JSONL (replayed on boot), the audit trail is an append-only JSONL log, and approvals snapshot atomically (tmp + rename) on every mutation — plus write-ahead snapshots around every send. Restart the server — nothing is lost, no decided draft comes back as pending, and a draft caught mid-send by a crash is flagged `send_failed` rather than resent blindly.
-- **UI smoke test**: `pnpm e2e` boots the real server and drives the dashboard in a real browser — fail-closed money moment, escalation, approval → simulated send, audit, report.
+```text
+src/core/       retrieval, draft/source gate, reviewed issues, radar, approvals, audit
+src/server/     Fastify API and file-backed persistence
+src/bot/        separate Discord adapter
+src/sim/        local FAQ, radar and report simulators
+web/src/        React organizer workbench
+data/corpus/    curated public source snapshots and human-reviewed registry
+data/seed/      synthetic demonstration community
+```
 
-## Privacy stance
+The source gate checks citations, sentence anchors, negation/exclusion, modal qualifiers, dates and numbers. A failed draft may receive one repair attempt. Leading standalone “Yes” or “No” particles must be rewritten as complete source-verifiable statements. If the repaired wording is still unsafe, it is escalated.
 
-The radar uses only public-channel metadata (joins, introduction posts, message timestamps). All outreach is human-approved before sending. No message content is used for anything beyond answering the question asked.
+Outreach requires human approval. The local sender records `simulated`, not `sent`. After a real sender failure or unknown crash-window outcome, an operator must inspect provider state before retrying; no provider-level exactly-once delivery is claimed.
 
-## Status
+## Evidence and limits
 
-Built in September 2026 for the AI Builders Hackathon. Core engine (corpus, citation gate with per-sentence polarity guard, contradiction radar with verified/candidate separation, stall radar, approval queue with send-failure recovery and write-ahead persistence, audit, sponsor report), the Fastify server, and the React dashboard are implemented and tested (73 unit tests + a 13-check real-browser smoke test). The Discord adapter is implemented but not yet verified against a live guild; the demo runs against an explicitly labeled synthetic replay.
+A recorded September 12 run made **one real Kimi request**, received a draft, and exercised the held-result/source/contact/audit path. The 140-second English film and deck use that run. The observed model response alias was `kimi-for-coding`; no backend version is inferred from it. See the [redacted evidence summary](docs/evidence/hosted-hero.json).
+
+The captured behavior tree has source hash `1eddf6d51b37191e` and corpus hash `46803dd9cd17b4ea`. This release retains that core runtime and corpus, with small display-copy corrections and the matching UI assertion update after filming. [Evidence notes](docs/evidence/hosted-hero.md) distinguish the recorded tree from the release tree. This one hero pass does not establish a full current-source hosted evaluation. Historical files in `eval-results/` describe their own recorded source hashes only.
+
+This release passed **78 offline tests, both TypeScript checks, the production build, and 13 browser smoke checks**. The deck contains exactly ten pages. [Release check summary](docs/evidence/release-checks.json).
+
+Existing verification commands:
+
+```bash
+pnpm test       # offline regression tests, including source-gate adversarial cases
+pnpm typecheck # server/core and browser TypeScript
+pnpm build     # production web bundle
+pnpm e2e       # real browser + local mock provider and simulated sender
+```
+
+`pnpm eval:live` and `pnpm smoke:kimi` use real provider quota and are separate optional checks. They were not rerun to publish this release.
+
+The source snapshot's contact information is archived, not verified-current contact information. Before use, check the current official event page. Live organizer adoption, measured impact, consent/opt-out handling, real community feeds, live Discord operation and new-conflict precision/recall remain unverified or unimplemented. The demo proves a visible held draft and evidence trail, not a final eligibility ruling.

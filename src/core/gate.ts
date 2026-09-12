@@ -38,6 +38,17 @@ const EXCLUDERS = new Set([
 const MUSTS = new Set(["must", "required", "requires", "require", "shall", "mandatory"]);
 const MAYS = new Set(["may", "might", "optional", "optionally", "allowed", "permitted"]);
 
+/**
+ * A leading "yes" or "no" answers the QUESTION, but verifyDraft deliberately
+ * receives only the draft and its evidence. Without the question's semantics,
+ * the gate cannot prove that particle. Reject it and let the single repair pass
+ * rewrite the answer as a complete, source-verifiable factual sentence.
+ *
+ * The particle must either stand alone or end at punctuation, so a faithful
+ * sentence such as "No credit card ... is required" keeps its ordinary negation.
+ */
+const INTERJECTION = /^(?:yes|no|yeah|nope)(?:\s*$|\s*[.!?]+(?:\s+|$)|\s*[,;:—–-]+\s+)/i;
+
 interface Cues {
   neg: string[];
   modal: string[];
@@ -101,6 +112,12 @@ function polarityProblems(claim: string, doc: CorpusDoc): string[] {
   // hide behind a faithful one: the merge dilutes containment below the
   // anchor threshold and the polarity check would never run.
   for (const sentence of splitSentences(claim)) {
+    if (INTERJECTION.test(sentence)) {
+      problems.push(
+        `leading yes/no answer particle is not independently source-verifiable; rewrite as a complete factual statement: '${sentence.slice(0, 70)}…'`,
+      );
+      continue;
+    }
     const cues = cueSignature(sentence);
     let best: { s: string; score: number } = { s: "", score: 0 };
     for (const src of srcSentences) {

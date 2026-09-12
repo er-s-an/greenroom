@@ -47,7 +47,9 @@ async function main() {
       case "conflicted": {
         const c = result.conflict!;
         audit.record("faq.conflicted", q, { pair: c.pair, severity: c.severity });
-        console.log(`CONFLICTED [${c.severity}, human-verified] — no one-sided answer given`);
+        console.log(
+          `CONFLICTED [${c.severity}, ${c.verifiedBy ?? "human-reviewed"}] — no one-sided answer given`,
+        );
         for (const s of c.sources) {
           console.log(`   [${s.docId}] ${s.url ?? ""}`);
           console.log(`     “${s.excerpt}”`);

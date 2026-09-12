@@ -48,8 +48,9 @@ export function recoverUnknownDeliveries(drafts: OutreachDraft[]): OutreachDraft
 /**
  * The approval gate. Every outbound message the copilot drafts sits here until
  * a human organizer approves or rejects it. The send function is injected, so
- * tests can prove nothing leaves without approval. A failed send never strands
- * a draft: it lands in `send_failed` and can be retried idempotently.
+ * tests can prove nothing leaves without approval. A known failed send lands
+ * in `send_failed` and can be retried after an operator verifies provider state.
+ * This queue does not provide a provider idempotency key or exactly-once delivery.
  * The optional `persist` hook is called write-ahead (before the send, while
  * the draft is still `approved`) and after the outcome is recorded, narrowing
  * the crash window to a recoverable, loudly-marked state.
@@ -114,7 +115,7 @@ export class ApprovalQueue {
     return draft;
   }
 
-  /** Idempotent resend for drafts stuck in `approved`/`send_failed`. */
+  /** Operator-triggered retry for drafts stuck in `approved`/`send_failed`. */
   async retrySend(id: string): Promise<OutreachDraft> {
     const draft = this.mustGet(id);
     if (draft.status !== "approved" && draft.status !== "send_failed") {

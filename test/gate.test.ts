@@ -235,3 +235,37 @@ describe("citation gate — merged citation claims cannot smuggle violations", (
     expect(verifyDraft({ text, citations: [{ claim: text, docId: doc.id }] }, [doc]).verdict).toBe("pass");
   });
 });
+
+// Answer particles: "No —"/"Yes." answer the question's polarity, but the gate
+// has no question semantics. They must be rewritten as complete factual claims
+// instead of being stripped for verification and retained in participant text.
+describe("citation gate — leading answer particles", () => {
+  const structured = byId(corpus, "eligibility.structured")!;
+  const discord = byId(corpus, "participation.discord")!;
+  const tin = byId(corpus, "prize.tin_credits")!;
+
+  const run = (claim: string, doc: typeof structured) =>
+    verifyDraft({ text: claim, citations: [{ claim, docId: doc.id }] }, [doc]);
+
+  it("rejects a leading answer particle, including one split into its own sentence", () => {
+    const faithful =
+      'the source states: "All countries/territories, excluding standard exceptions: Brazil, Crimea, Cuba, Iran, North Korea, Quebec, Russia."';
+    for (const claim of [`No — ${faithful}`, `Yes. ${faithful}`, `Yeah! ${faithful}`, `Nope. ${faithful}`]) {
+      const result = run(claim, structured);
+      expect(result.verdict).toBe("escalate");
+      expect(result.reasons.join(" ")).toMatch(/leading yes\/no answer particle/);
+    }
+  });
+
+  it("rejects a misleading particle before a source-faithful clause", () => {
+    const claim = "No — Joining our Discord server is mandatory for all participants.";
+    const result = run(claim, discord);
+    expect(result.verdict).toBe("escalate");
+    expect(result.reasons.join(" ")).toMatch(/leading yes\/no answer particle/);
+  });
+
+  it("does not strip an unpunctuated 'No' — faithful credit-card sentence keeps its negation", () => {
+    const claim = "No credit card, payment, paperwork, or ongoing commitment is required.";
+    expect(run(claim, tin).verdict).toBe("pass");
+  });
+});

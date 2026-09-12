@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "releaseSourceHash": "eb4c64b1183ec1fb",
+  "corpusHash": "46803dd9cd17b4ea",
+  "unitTests": {
+    "passed": 78,
+    "total": 78,
+    "files": 7,
+    "mode": "offline, no cache"
+  },
+  "typecheck": "PASS: core/server and browser",
+  "webBuild": "PASS: production Vite bundle",
+  "browserE2E": {
+    "passed": 13,
+    "total": 13,
+    "artifact": "../../e2e-results/e2e-2026-09-12T08-44-46-721Z.json",
+    "mode": "offline mock, throwaway synthetic data, simulated sender"
+  },
+  "deck": {
+    "pages": 10,
+    "pageSizePoints": [
+      960,
+      540
+    ],
+    "sha256": "0c9b2d09be4f8da12aee2b85172dc38596d02d25d772039709ece8e7e7badbbc"
+  },
+  "additionalHostedCallsForPublication": 0,
+  "newFeaturesForPublication": false
+}

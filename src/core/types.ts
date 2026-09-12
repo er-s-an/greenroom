@@ -39,6 +39,12 @@ export interface ContradictionFinding {
   explanation: string;
   verified: boolean;
   /**
+   * Who verified this finding and in what context, e.g. "human review during
+   * corpus curation (2026-09-10)". Displayed verbatim — never upgraded to an
+   * organizer endorsement the evidence doesn't support.
+   */
+  verifiedBy?: string;
+  /**
    * Human-marked conflict locus: the verbatim sentence(s) in each paired doc
    * that contradict each other. Drives fail-closed matching and is shown to
    * the participant as the two conflicting excerpts.

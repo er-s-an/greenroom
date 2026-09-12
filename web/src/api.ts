@@ -77,6 +77,7 @@ export interface ConflictBlock {
   explanation: string;
   sources: [ConflictSource, ConflictSource];
   routeTo: string;
+  verifiedBy?: string;
 }
 
 export interface ContradictionFinding {
@@ -84,6 +85,7 @@ export interface ContradictionFinding {
   severity: "low" | "medium" | "high";
   explanation: string;
   verified: boolean;
+  verifiedBy?: string;
   anchors?: [string, string];
 }
 
@@ -91,6 +93,7 @@ export interface FaqResult {
   question: string;
   decision: "answered" | "escalated" | "conflicted";
   answer?: string;
+  withheldDraft?: { text: string; provider: string };
   citations?: Citation[];
   conflict?: ConflictBlock;
   alerts?: {

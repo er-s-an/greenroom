@@ -194,7 +194,7 @@ export class KimiLlm implements LlmProvider {
   async draftAnswer(question: string, docs: CorpusDoc[], opts?: DraftOptions): Promise<AnswerDraft> {
     const context = docs.map((d) => `DOC ${d.id} (${d.title}):\n${d.body}`).join("\n\n");
     const repair = opts?.repairHints?.length
-      ? `\n\nYour previous draft was REJECTED by the citation gate for these reasons:\n${opts.repairHints.map((h) => `- ${h}`).join("\n")}\nFix all of them. Do NOT paraphrase: copy the relevant source sentence(s) verbatim — you may quote them inside your answer — and make each cited claim exactly match a sentence of your answer.`
+      ? `\n\nYour previous draft was REJECTED by the citation gate for these reasons:\n${opts.repairHints.map((h) => `- ${h}`).join("\n")}\nFix all of them. Do not begin with a standalone Yes, No, Yeah, or Nope. State the source-verifiable fact directly. Do NOT paraphrase: copy the relevant source sentence(s) verbatim — you may quote them inside your answer — and make each cited claim exactly match a sentence of your answer.`
       : "";
     const raw = await this.call(
       "You are a community FAQ assistant. You may ONLY use the provided documents and must cite every sentence. Output JSON only.",

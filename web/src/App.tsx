@@ -57,46 +57,83 @@ export default function App() {
       <div className="app">
         <TopBar state={state} />
         {error && <div className="error-banner">API error: {error}</div>}
-        <main className="grid">
+        <main>
+          <section className="hero-intro" aria-labelledby="hero-title">
+            <div className="hero-copy">
+              <p className="eyebrow">2:07 AM · volunteer organizer on duty</p>
+              <h1 id="hero-title">
+                Asha has one question she cannot afford to answer wrong.
+              </h1>
+              <p className="hero-dek">
+                An incorporated team wants to know if it can enter. A confident guess would become
+                an eligibility ruling.
+              </p>
+              <span className="persona-tag">Asha is a synthetic demo persona</span>
+            </div>
+            <aside className="permission-promise" aria-label="Greenroom's job">
+              <span>Greenroom’s job</span>
+              <strong>Let AI help. Stop when the evidence cannot carry the answer.</strong>
+            </aside>
+          </section>
+
           <motion.div
-            className="panel-ask"
+            className="hero-workbench"
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={panelSpring}
           >
-            <AskPanel />
+            <AskPanel onResolved={refresh} />
           </motion.div>
-          <div className="rail">
+
+          <section className="chapter-heading" id="follow-through">
+            <p className="eyebrow">Secondary capability</p>
+            <div>
+              <h2>Controlled follow-through</h2>
+              <p>Stall radar is the second example of the same boundary: AI proposes; a human sends.</p>
+            </div>
+          </section>
+
+          <div className="operations-grid">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...panelSpring, delay: 0.08 }}
-            >
-              <FindingsPanel findings={findings} />
-            </motion.div>
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...panelSpring, delay: 0.16 }}
             >
               <RadarPanel flags={flags} onDrafted={refresh} />
             </motion.div>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ ...panelSpring, delay: 0.24 }}
+              transition={{ ...panelSpring, delay: 0.16 }}
             >
               <ApprovalsPanel drafts={drafts} onAction={refresh} />
             </motion.div>
           </div>
-          <motion.div
-            style={{ gridColumn: "1 / -1" }}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...panelSpring, delay: 0.32 }}
-          >
-            <AuditPanel audit={audit} />
-          </motion.div>
+
+          <section className="chapter-heading chapter-proof" id="proof">
+            <p className="eyebrow">The receipt · evidence</p>
+            <div>
+              <h2>What happened, not what the model claims</h2>
+              <p>The audit is the source of truth. Detector candidates remain visibly separate.</p>
+            </div>
+          </section>
+
+          <div className="proof-grid">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...panelSpring, delay: 0.24 }}
+            >
+              <AuditPanel audit={audit} />
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...panelSpring, delay: 0.32 }}
+            >
+              <FindingsPanel findings={findings} />
+            </motion.div>
+          </div>
         </main>
       </div>
     </MotionConfig>

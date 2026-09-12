@@ -1,64 +1,38 @@
-# Verifying Greenroom's gates (2 minutes, offline)
+# Greenroom — The Space Before Send
 
-Greenroom's claim is that its guardrails are **deterministic and tested**, not prompt engineering. Here's how to check that claim yourself.
+The 140-second English film follows one question from a synthetic organizer's late-night inbox to a held draft with inspectable sources. The product recording comes from the September 12 hosted Kimi run summarized in [the evidence notes](evidence/hosted-hero.md).
+
+## Walkthrough
+
+1. Open the organizer workbench. Asha and the community are visibly labeled synthetic.
+2. Ask `can companies participate??` and select **Run source check**.
+3. Inspect the model draft. The recorded Kimi run returned: “Companies/professional organizations excluded from participation.”
+4. Greenroom holds the draft because it touches a high-severity eligibility issue already registered by a human during source review.
+5. Read both sources. The rules' founder language and structured student/company restriction require clarification; they do not establish a final ruling by themselves.
+6. Inspect the saved organizer contact and the `faq.conflicted` audit. Contact information is displayed; nobody is assigned or notified.
+
+The film's paper plane is a visual metaphor for the pause before sending. It is not a recording of a live Discord message being intercepted. Large paper source plates enlarge the actual wording for readability. The recorded UI, source excerpts and audit come from the same hosted take.
+
+## Local reproduction
 
 ```bash
 pnpm install
-pnpm test
+pnpm build
+pnpm dev
 ```
 
-73 unit tests cover the safety properties:
+Open `http://localhost:3000`. The default offline provider is labeled as a test double. Its success is local workflow evidence, not a fresh hosted model run.
 
-| Property | Test |
-|---|---|
-| An answer sentence without a citation never ships | `test/gate.test.ts › blocks an uncited sentence` |
-| A fabricated claim (drifts from source) never ships | `› blocks a fabricated claim that drifts from the source` |
-| Citations to un-retrieved documents never ship | `› blocks citations to documents that were never retrieved` |
-| A claim that flips the source's negation never ships | `› blocks the not-flip` (+ never-flip, dropped-negation cases) |
-| A must↔may swap never ships | `› blocks a must→may swap` |
-| A dropped geographic exclusion never ships | `› blocks a dropped geographic exclusion` |
-| Swapped numbers/dates never ship | `› blocks a number swap`, `› blocks a date flip` |
-| A violating sentence merged into one citation claim with a faithful sentence never ships | `› merged citation claims cannot smuggle violations` (5 cases) |
-| A verified doc conflict fails closed — no one-sided verdict | `test/faq.test.ts › money moment: 'Can companies participate?' fails closed` |
-| Unverified detector candidates never reach participants | `› never surfaces unverified detector candidates` |
-| Stale deadlines are never presented as open | `test/gate.test.ts › requires staleness acknowledgement` |
-| Off-topic questions escalate to humans instead of hallucinating | `test/faq.test.ts › escalates off-topic questions` |
-| Deadline answers never mix in another program's dates | `› deadline smoke cites ONLY this event's deadline` |
-| Outreach is never sent before human approval | `test/radar.test.ts › sends nothing before approval` |
-| Rejected drafts can never be sent later | `› rejected drafts are never sent` |
-| A failed send lands in send_failed and retry recovers it | `› a failing sender lands in send_failed` |
-| Demo sends are labeled simulated, never "sent" | `› marks demo-sender outcomes as simulated` |
-| A crash mid-send comes back flagged, never silently resent | `› recoverUnknownDeliveries flags crash-window drafts` |
-| Decisions survive restarts (incl. rejections and send failures) | `test/store.test.ts` |
+To use a hosted provider, configure the local credential securely and run `LLM=kimi pnpm dev`. This can consume quota for both startup candidate proposals and FAQ drafting. The published recorded take deliberately skipped startup model candidate generation and loaded the existing human-reviewed registry; its FAQ request genuinely called Kimi. It required one request and no repair.
 
-## Try the pipeline
+## What the result means
 
-```bash
-# Grounded FAQ — companies question fails closed on the verified conflict;
-# Discord question answers with citations; wifi password escalates
-pnpm sim "Can companies participate?" "do I have to join Discord?" "what's the wifi password?"
+The draft is held. The sources and their review provenance stay visible. The saved contact comes from the September 10 source snapshot and must be checked before use; a later official-page check found different contact information. The question remains open for a human.
 
-# Stall radar → drafted outreach → approval gate → audit trail
-pnpm sim:radar
+The release fixes old display strings that suggested an owner had been assigned or that a particular backend Kimi version was verified. These are copy corrections, not new assignment or notification functionality. The original film footage is retained as recorded; the submitted narrative does not repeat those unsupported claims.
 
-# The full loop ending in a sponsor report computed from current state
-pnpm sim:report
-```
+The secondary radar → draft → human approval → simulated delivery → audit/report workflow is available below the main workbench. It uses synthetic data and does not send Discord messages.
 
-## The dashboard
+## Checks
 
-```bash
-pnpm build && pnpm dev   # http://localhost:3000
-```
-
-Five panels: **Ask** (cited answers, fail-closed conflict card), **Doc conflicts** (verified findings vs. candidates awaiting review), **Stall radar** (participant lifecycle board), **Approval queue** (nothing sends without a click; simulated sends are labeled), **Audit trail + sponsor report**.
-
-The dashboard runs in **synthetic replay** mode by default and says so in the top bar: 12 synthetic members, a fixed demo clock, and a demo sender whose receipts are marked `simulated`. `GREENROOM_MODE=live` switches to the wall clock.
-
-## The demo data
-
-`data/seed/community.json` is a **synthetic** 12-member replica of a hackathon Discord — no real people. `data/corpus/ai-builders-hackathon-2026.json` quotes this hackathon's official rules/announcements verbatim, each with a source anchor. The eligibility contradiction Greenroom surfaces is real and human-verified: compare `eligibility.rules_text` ("Startup founders and entrepreneurs" welcome) with `eligibility.structured` ("Students only", "Companies/professional organizations excluded") in that file — both quote the official page.
-
-## Hosted LLM
-
-Set `KIMI_CODE_API_KEY` to swap the offline mock for Kimi K2.7 (`kimi-for-coding` via the OpenAI-compatible endpoint). The gates behave identically either way — that's the point.
+`pnpm test`, `pnpm typecheck`, `pnpm build` and `pnpm e2e` verify the local release. One recorded hosted hero is not a full adversarial evaluation. Live Discord, real organizer adoption, measured participant outcomes and unknown-conflict discovery accuracy are not established.

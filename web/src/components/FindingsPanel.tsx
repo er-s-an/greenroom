@@ -35,12 +35,13 @@ export function FindingsPanel({ findings }: { findings: ContradictionFinding[] }
               >
                 <div className="finding-head">
                   <span className={`chip ${f.verified ? "chip-verified" : "chip-candidate"}`}>
-                    {f.verified ? "verified" : "needs review"}
+                    {f.verified ? "human-reviewed" : "needs review"}
                   </span>
                   <span className={`chip severity-${f.severity}`}>{f.severity}</span>
                 </div>
                 <p className="mono finding-pair">{f.pair.join(" × ")}</p>
                 <p className="finding-explanation">{f.explanation}</p>
+                {f.verified && f.verifiedBy && <p className="muted finding-verifiedby">{f.verifiedBy}</p>}
               </motion.div>
             ))}
           </AnimatePresence>

@@ -1,0 +1,33 @@
+{
+  "status": "RECORDED_HOSTED_HERO_PASS",
+  "capturedAt": "2026-09-12T07:50:32.159Z",
+  "scenario": "Synthetic organizer question: can companies participate??",
+  "providerResponseModel": "kimi-for-coding",
+  "requestCount": 1,
+  "httpStatus": 200,
+  "elapsedMs": 3918,
+  "repairRequests": 0,
+  "outcome": {
+    "draftWithheld": true,
+    "sourceExcerpts": 2,
+    "savedContactShown": true,
+    "auditKind": "faq.conflicted"
+  },
+  "capturedSourceHash": "1eddf6d51b37191e",
+  "releaseSourceHash": "eb4c64b1183ec1fb",
+  "corpusHash": "46803dd9cd17b4ea",
+  "releaseCoreAndCorpusMatchCapturedFiles": true,
+  "matchingCoreAndCorpusFiles": 20,
+  "changesAfterCapture": [
+    "web/src/components/AskPanel.tsx: display copy no longer implies assignment; provider label does not infer model version",
+    "web/src/components/TopBar.tsx: generic hosted Kimi label",
+    "scripts/e2e.mts: match the saved-contact label"
+  ],
+  "scope": [
+    "One hero question, not a full hosted evaluation",
+    "Startup model candidate generation skipped; existing human-reviewed registry used",
+    "Archived September 10 official source snapshot; contact not claimed current",
+    "No live Discord send, owner assignment or notification"
+  ],
+  "publicationRedaction": "Summary only. No credentials, request headers, raw prompts, raw provider payloads, private conversations or local account paths."
+}

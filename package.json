@@ -16,7 +16,8 @@
     "test": "vitest run",
     "typecheck": "tsc --noEmit && tsc -p web/tsconfig.json --noEmit",
     "e2e": "tsx scripts/e2e.mts",
-    "eval:live": "tsx scripts/eval-live.mts"
+    "eval:live": "tsx scripts/eval-live.mts",
+    "smoke:kimi": "tsx scripts/kimi-smoke.mts"
   },
   "engines": {
     "node": ">=20.0.0",

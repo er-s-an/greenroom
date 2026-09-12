@@ -122,7 +122,7 @@ export async function startBot(deps: BotDeps): Promise<Client> {
       case "conflicted": {
         const c = result.conflict!;
         await message.reply(
-          `**Official sources conflict on this** (verified by a human), so I won't guess.\n` +
+          `**Official sources conflict on this** (${c.verifiedBy ?? "human-reviewed"}), so I won't guess.\n` +
             `• ${c.sources[0].title}: "${c.sources[0].excerpt}"\n` +
             `• ${c.sources[1].title}: "${c.sources[1].excerpt}"\n` +
             `A human organizer decides this one — ${c.routeTo}`,
@@ -130,7 +130,7 @@ export async function startBot(deps: BotDeps): Promise<Client> {
         const org = await findChannelByName(client, organizerChannelName);
         await org?.send(
           `**Conflicted question** from @${message.author.tag}: "${question}"\n` +
-            `${c.pair.join(" × ")} [${c.severity}, verified] — both sources were shown; routed to a human.`,
+            `${c.pair.join(" × ")} [${c.severity}, ${c.verifiedBy ?? "human-reviewed"}] — both sources were shown; routed to a human.`,
         );
         break;
       }

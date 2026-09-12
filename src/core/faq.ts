@@ -32,12 +32,16 @@ export interface ConflictBlock {
   explanation: string;
   sources: [ConflictSource, ConflictSource];
   routeTo: string;
+  /** Who verified the conflict and in what context — shown verbatim, no endorsement upgrade. */
+  verifiedBy?: string;
 }
 
 export interface FaqResult {
   question: string;
   decision: "answered" | "escalated" | "conflicted";
   answer?: string;
+  /** Organizer-only evidence: the model draft a conflict gate withheld. */
+  withheldDraft?: { text: string; provider: string };
   citations?: { claim: string; docId: string; url?: string }[];
   conflict?: ConflictBlock;
   /** Fired when an answered question touches a verified documentation conflict. */
@@ -135,6 +139,7 @@ function conflictBlock(f: ContradictionFinding, corpus: Corpus): ConflictBlock {
     explanation: f.explanation,
     sources: [source(f.pair[0], 0), source(f.pair[1], 1)],
     routeTo: humanRoute(corpus),
+    ...(f.verifiedBy ? { verifiedBy: f.verifiedBy } : {}),
   };
 }
 
@@ -203,6 +208,7 @@ export async function answerQuestion(
     return {
       question,
       decision: "conflicted",
+      withheldDraft: { text: draft.text, provider: llm.name },
       conflict: conflictBlock(blocker, corpus),
       trace: { ...trace, ...(repaired ? { repaired } : {}) },
     };

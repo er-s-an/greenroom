@@ -29,7 +29,13 @@ interface SeedFile {
 }
 
 interface VerifiedRegistry {
-  findings: { pair: [string, string]; severity: "low" | "medium" | "high"; explanation: string }[];
+  findings: {
+    pair: [string, string];
+    severity: "low" | "medium" | "high";
+    explanation: string;
+    verifiedBy?: string;
+    anchors?: [string, string];
+  }[];
 }
 
 /**
@@ -45,6 +51,9 @@ const registry = JSON.parse(
   readFileSync(join(rootDir, "data/corpus/contradictions.verified.json"), "utf8"),
 ) as VerifiedRegistry;
 const seed = JSON.parse(readFileSync(join(rootDir, "data/seed/community.json"), "utf8")) as SeedFile;
+// The checked-in community is synthetic in every clock mode. `live` changes
+// time/deadline only; truth labels must follow the data actually loaded.
+const SYNTHETIC_COMMUNITY = seed.events.length > 0;
 
 const now = LIVE ? Date.now() : new Date(seed.now).getTime();
 const deadlineAt = process.env.GREENROOM_DEADLINE
@@ -96,7 +105,7 @@ app.get("/api/state", async () => ({
   members: community.list(),
   provider: llm.name,
   mode: LIVE ? ("live" as const) : ("synthetic-replay" as const),
-  synthetic: !LIVE,
+  synthetic: SYNTHETIC_COMMUNITY,
 }));
 
 app.get("/api/radar", async () => scan(community, { now, deadlineAt }));
@@ -180,7 +189,7 @@ app.get("/api/report", async () => ({
     corpus,
     now,
     deadlineAt,
-    mode: LIVE ? "live" : "synthetic-replay",
+    mode: SYNTHETIC_COMMUNITY ? "synthetic-replay" : "live",
     sponsor: {
       name: "Tin Computer",
       anchorText: "Tin Computer — the growth agent for small SaaS",

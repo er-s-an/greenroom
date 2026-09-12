@@ -31,6 +31,7 @@ interface VerifiedRegistry {
     pair: [string, string];
     severity: "low" | "medium" | "high";
     explanation: string;
+    verifiedBy?: string;
     anchors?: [string, string];
   }[];
 }

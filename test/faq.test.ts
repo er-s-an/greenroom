@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { loadCorpus } from "../src/core/corpus.js";
 import { answerQuestion } from "../src/core/faq.js";
 import { MockLlm, type DraftOptions } from "../src/core/llm.js";
-import type { AnswerDraft } from "../src/core/types.js";
+import type { AnswerDraft, CorpusDoc } from "../src/core/types.js";
 import { scanCorpus } from "../src/core/contradictions.js";
 
 const corpus = loadCorpus("data/corpus/ai-builders-hackathon-2026.json");
@@ -129,6 +129,41 @@ describe("faq pipeline", () => {
     expect(result.decision).toBe("escalated");
     expect(result.answer).toBeUndefined();
     expect(result.escalation?.reasons.join(" ")).toMatch(/negation\/exclusion differs/);
+  });
+
+  it("repairs a leading Yes/No particle before returning participant text (full pipeline)", async () => {
+    let calls = 0;
+    const particleThenFact = new MockLlm();
+    particleThenFact.draftAnswer = async (
+      _question: string,
+      _docs: CorpusDoc[],
+      opts?: DraftOptions,
+    ): Promise<AnswerDraft> => {
+      calls++;
+      const text = opts?.repairHints
+        ? "Joining our Discord server is mandatory for all participants."
+        : "No — Joining our Discord server is mandatory for all participants.";
+      return { text, citations: [{ claim: text, docId: "participation.discord" }] };
+    };
+
+    const result = await answerQuestion("Do I have to join Discord?", corpus, particleThenFact);
+    expect(calls).toBe(2);
+    expect(result.decision).toBe("answered");
+    expect(result.answer).toBe("Joining our Discord server is mandatory for all participants.");
+    expect(result.trace.repaired).toBe(true);
+  });
+
+  it("never returns a misleading Yes/No particle when repair repeats it (full pipeline)", async () => {
+    const repeatsParticle = new MockLlm();
+    repeatsParticle.draftAnswer = async (): Promise<AnswerDraft> => {
+      const text = "No — Joining our Discord server is mandatory for all participants.";
+      return { text, citations: [{ claim: text, docId: "participation.discord" }] };
+    };
+
+    const result = await answerQuestion("Do I have to join Discord?", corpus, repeatsParticle);
+    expect(result.decision).toBe("escalated");
+    expect(result.answer).toBeUndefined();
+    expect(result.escalation?.reasons.join(" ")).toMatch(/leading yes\/no answer particle/);
   });
 
   it("repairs a gate-rejected draft once instead of escalating", async () => {

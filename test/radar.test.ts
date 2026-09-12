@@ -135,7 +135,7 @@ describe("approval gate", () => {
     expect(kinds).toEqual(["outreach.approved", "outreach.sent"]);
   });
 
-  it("a failing sender lands in send_failed, and retry recovers it idempotently", async () => {
+  it("a known failed send lands in send_failed and can be retried by the operator", async () => {
     let attempts = 0;
     const audit = new AuditLog();
     const queue = new ApprovalQueue({
